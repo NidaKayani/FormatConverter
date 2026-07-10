@@ -25,6 +25,18 @@ export async function detectFormat(file) {
   if (head[0] === 0 && head[1] === 0 && head[2] === 1 && head[3] === 0) return 'ico'
   if (ascii(head, 4, 8) === 'ftyp' && HEIC_BRANDS.includes(ascii(head, 8, 12).toLowerCase())) return 'heic'
 
+  // Zip container: DOCX if it holds word/document.xml, otherwise unsupported
+  if (head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04) {
+    try {
+      const JSZip = (await import('jszip')).default
+      const zip = await JSZip.loadAsync(file)
+      if (zip.file('word/document.xml')) return 'docx'
+    } catch {
+      // not a readable zip
+    }
+    return null
+  }
+
   // Text-based formats: decode a chunk and sniff
   let text = ''
   try {

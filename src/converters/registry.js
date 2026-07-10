@@ -11,6 +11,7 @@ export const FORMATS = {
   txt:  { label: 'Text',     kind: 'document', exts: ['txt', 'text', 'log'], mime: 'text/plain', input: true, output: true },
   md:   { label: 'Markdown', kind: 'document', exts: ['md', 'markdown', 'mdown'], mime: 'text/markdown', input: true, output: true },
   html: { label: 'HTML',     kind: 'document', exts: ['html', 'htm'], mime: 'text/html', input: true, output: true },
+  docx: { label: 'Word',     kind: 'document', exts: ['docx'], mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', input: true, output: true },
   png:  { label: 'PNG',      kind: 'image', exts: ['png'], mime: 'image/png', input: true, output: true },
   jpg:  { label: 'JPEG',     kind: 'image', exts: ['jpg', 'jpeg'], mime: 'image/jpeg', input: true, output: true },
   webp: { label: 'WebP',     kind: 'image', exts: ['webp'], mime: 'image/webp', input: true, output: true },
@@ -47,6 +48,28 @@ const OPT_ICO_SIZES = {
   choices: [16, 32, 48, 64, 128, 256].map((n) => ({ value: n, label: `${n}×${n}` })),
   help: 'Sizes embedded in the .ico file.',
 }
+const OPT_OCR_LANGUAGE = {
+  key: 'ocrLanguage', label: 'OCR language', type: 'select', default: 'eng',
+  choices: [
+    { value: 'eng', label: 'English' },
+    { value: 'spa', label: 'Spanish' },
+    { value: 'fra', label: 'French' },
+    { value: 'deu', label: 'German' },
+    { value: 'por', label: 'Portuguese' },
+    { value: 'ara', label: 'Arabic' },
+    { value: 'hin', label: 'Hindi' },
+    { value: 'chi_sim', label: 'Chinese (Simplified)' },
+  ],
+  help: 'Language of the text in the image. English is bundled; others download on first use.',
+}
+const OPT_OCR = {
+  key: 'ocr', label: 'OCR scanned pages', type: 'select', default: 'auto',
+  choices: [
+    { value: 'auto', label: 'Auto (when no text layer)' },
+    { value: 'off', label: 'Off' },
+  ],
+  help: 'Recognize text in scanned PDFs that have no embedded text.',
+}
 const OPT_SCALE = {
   key: 'scale', label: 'Render scale', type: 'select', default: 2,
   choices: [{ value: 1, label: '1× (72 dpi)' }, { value: 2, label: '2× (144 dpi)' }, { value: 3, label: '3× (216 dpi)' }],
@@ -72,9 +95,10 @@ function register(from, to, load, options = []) {
 }
 
 // Documents — every direction is a real parse/render, never a rename.
-register('pdf', 'txt', () => import('./docs/pdfToTxt.js'))
-register('pdf', 'md', () => import('./docs/pdfToMd.js'))
-register('pdf', 'html', () => import('./docs/pdfToHtml.js'))
+// PDF extraction auto-falls back to OCR for scanned documents.
+register('pdf', 'txt', () => import('./docs/pdfToTxt.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
+register('pdf', 'md', () => import('./docs/pdfToMd.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
+register('pdf', 'html', () => import('./docs/pdfToHtml.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
 register('txt', 'pdf', () => import('./docs/textToPdf.js'), [OPT_PAGE_SIZE])
 register('txt', 'md', () => import('./docs/txtToMd.js'))
 register('txt', 'html', () => import('./docs/txtToHtml.js'))
@@ -84,6 +108,21 @@ register('md', 'html', () => import('./docs/mdToHtml.js'))
 register('html', 'pdf', () => import('./docs/htmlToPdf.js'), [OPT_PAGE_SIZE])
 register('html', 'md', () => import('./docs/htmlToMd.js'))
 register('html', 'txt', () => import('./docs/htmlToTxt.js'))
+
+// Word documents — mammoth on the way in, the docx generator on the way out
+register('docx', 'pdf', () => import('./docs/docxToPdf.js'), [OPT_PAGE_SIZE])
+register('docx', 'md', () => import('./docs/docxToMd.js'))
+register('docx', 'txt', () => import('./docs/docxToTxt.js'))
+register('docx', 'html', () => import('./docs/docxToHtmlDoc.js'))
+register('md', 'docx', () => import('./docs/mdToDocx.js'))
+register('txt', 'docx', () => import('./docs/txtToDocx.js'))
+register('html', 'docx', () => import('./docs/htmlToDocx.js'))
+register('pdf', 'docx', () => import('./docs/pdfToDocx.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
+
+// OCR: photos/scans → text
+for (const from of ['png', 'jpg', 'webp', 'bmp', 'gif', 'heic']) {
+  register(from, 'txt', () => import('./ocr/imageToTxt.js'), [OPT_OCR_LANGUAGE])
+}
 
 // PDF pages → raster images (zip when multi-page)
 register('pdf', 'png', () => import('./images/pdfToImages.js'), [OPT_SCALE])

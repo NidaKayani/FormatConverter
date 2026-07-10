@@ -18,8 +18,19 @@ function headingLevel(line, bodySize) {
  * bold lines become bold text, bullet/numbered glyphs become list items, and
  * vertical gaps become paragraph breaks.
  */
-export async function pdfToMarkdown(file, onProgress) {
+export async function pdfToMarkdown(file, options = {}, onProgress = () => {}) {
   const pages = await extractPages(file, onProgress)
+
+  // Scanned PDF (no text layer): OCR the pages and return the recognized
+  // text as paragraph-per-block Markdown
+  if (options.ocr !== 'off') {
+    const { looksScanned, ocrPdfPages } = await import('../ocr/pdfOcr.js')
+    if (looksScanned(pages)) {
+      const texts = await ocrPdfPages(file, options, onProgress)
+      return texts.join('\n\n---\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'
+    }
+  }
+
   const bodySize = bodyFontSize(pages)
   const out = []
 
@@ -64,6 +75,6 @@ export async function pdfToMarkdown(file, onProgress) {
 }
 
 export default async function pdfToMd(file, options, onProgress) {
-  const md = await pdfToMarkdown(file, onProgress)
+  const md = await pdfToMarkdown(file, options, onProgress)
   return new Blob([md], { type: 'text/markdown;charset=utf-8' })
 }

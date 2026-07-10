@@ -680,3 +680,37 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* Batch queue */
+.queue {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.queue-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.queue-row + .queue-row {
+  border-top: 1px solid var(--border-color);
+}
+
+.queue-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-error {
+  margin: 0;
+  font-size: 13px;
+}

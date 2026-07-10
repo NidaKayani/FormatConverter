@@ -43,3 +43,49 @@ export async function convert(file, to, options = {}) {
   const filename = `${baseName(file.name)}.${ext}`
   return { blob, filename, from, to }
 }
+
+/**
+ * Convert several files to the same target format, sequentially.
+ *
+ * onProgress receives { fileIndex, fileCount, file, ...perFileProgress }.
+ * Returns one entry per input: { file, ok, result?, error? } — a failing file
+ * doesn't abort the rest of the batch.
+ */
+export async function convertMany(files, to, options = {}) {
+  const list = Array.from(files)
+  const { onProgress, ...opts } = options
+  const results = []
+
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i]
+    const report = (p = {}) =>
+      onProgress?.({ fileIndex: i, fileCount: list.length, file, ...p })
+    report()
+    try {
+      const result = await convert(file, to, { ...opts, onProgress: report })
+      results.push({ file, ok: true, result })
+    } catch (error) {
+      results.push({ file, ok: false, error })
+    }
+  }
+  return results
+}
+
+/** Bundle successful batch results into a single .zip Blob. */
+export async function zipResults(results, zipName = 'converted.zip') {
+  const JSZip = (await import('jszip')).default
+  const zip = new JSZip()
+  const used = new Set()
+  for (const entry of results) {
+    if (!entry.ok) continue
+    let name = entry.result.filename
+    // Two inputs can map to the same output name — de-duplicate
+    for (let n = 2; used.has(name); n++) {
+      name = entry.result.filename.replace(/(\.[^.]+)$/, `-${n}$1`)
+    }
+    used.add(name)
+    zip.file(name, entry.result.blob)
+  }
+  const blob = await zip.generateAsync({ type: 'blob' })
+  return { blob, filename: zipName }
+}

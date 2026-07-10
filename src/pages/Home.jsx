@@ -5,7 +5,7 @@ import { setPendingFile } from '../lib/pendingFile.js'
 import { formatBytes } from '../lib/format.js'
 import Dropzone from '../components/Dropzone.jsx'
 
-const DOC_SOURCES = ['pdf', 'txt', 'md', 'html']
+const DOC_SOURCES = ['pdf', 'docx', 'txt', 'md', 'html']
 const IMAGE_SOURCES = ['png', 'jpg', 'webp', 'gif', 'svg', 'bmp', 'heic', 'ico']
 
 function SourceCard({ from }) {

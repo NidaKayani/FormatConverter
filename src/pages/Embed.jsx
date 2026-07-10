@@ -41,7 +41,7 @@ export default function Embed() {
       <p className="embed-title">
         {FORMATS[from].label} → {FORMATS[to].label}
       </p>
-      <ConverterWidget key={`${from}-${to}`} from={from} to={to} onResult={handleResult} />
+      <ConverterWidget key={`${from}-${to}`} from={from} to={to} onResult={handleResult} single />
       <p className="embed-credit">
         Powered by{' '}
         <a href="https://formatconvert.quantumlogicslimited.com" target="_blank" rel="noreferrer">
