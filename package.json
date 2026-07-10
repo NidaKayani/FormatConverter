@@ -1,20 +1,30 @@
 {
-  "name": "pdf-to-text",
+  "name": "formatconvert",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.sdk.config.js",
+    "build:app": "vite build",
+    "build:sdk": "vite build --config vite.sdk.config.js",
     "preview": "vite preview"
   },
   "dependencies": {
+    "heic2any": "^0.0.4",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
+    "marked": "^18.0.6",
     "pdfjs-dist": "4.0.379",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-router-dom": "^7.18.1",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",
+    "playwright-core": "^1.61.1",
     "vite": "5.4.11"
   }
 }

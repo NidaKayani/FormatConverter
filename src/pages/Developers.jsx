@@ -1,0 +1,217 @@
+import { useState } from 'react'
+import { FORMATS, listConversions } from '../converters/index.js'
+
+const ORIGIN = 'https://formatconvert.quantumlogicslimited.com'
+
+function CodeBlock({ code }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="codeblock">
+      <button className="codeblock-copy" onClick={copy}>
+        {copied ? 'Copied!' : 'Copy'}
+      </button>
+      <pre>
+        <code>{code}</code>
+      </pre>
+    </div>
+  )
+}
+
+const QUICKSTART = `<input type="file" id="picker" />
+
+<script type="module">
+  import { convert } from '${ORIGIN}/sdk.js'
+
+  document.getElementById('picker').addEventListener('change', async (e) => {
+    const file = e.target.files[0]
+
+    // Convert anything to anything — input format is auto-detected
+    const { blob, filename } = await convert(file, 'pdf')
+
+    // Do whatever you want with the result: download it, upload it, preview it
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    a.click()
+  })
+</script>`
+
+const OPTIONS_EXAMPLE = `import { convert } from '${ORIGIN}/sdk.js'
+
+// Markdown → PDF on US Letter paper
+const pdf = await convert(mdFile, 'pdf', { pageSize: 'letter' })
+
+// JPEG → WebP at 80% quality, resized to 1200px wide
+const webp = await convert(photo, 'webp', { quality: 0.8, width: 1200 })
+
+// PNG → favicon.ico with three embedded sizes
+const ico = await convert(logo, 'ico', { sizes: [16, 32, 48] })
+
+// PDF → PNG at 3× resolution, with page-by-page progress
+const images = await convert(pdfFile, 'png', {
+  scale: 3,
+  onProgress: ({ page, total }) => console.log(\`page \${page}/\${total}\`),
+})`
+
+const DETECT_EXAMPLE = `import { detectFormat, targetsFor, listConversions, FORMATS } from '${ORIGIN}/sdk.js'
+
+const format = await detectFormat(file)     // e.g. 'pdf' (magic bytes, not extension)
+const targets = targetsFor(format)          // e.g. ['txt', 'md', 'html', 'png', 'jpg']
+const matrix = listConversions()            // every supported { from, to, options } pair
+console.log(FORMATS[format].label)          // human-readable name`
+
+const GLOBAL_EXAMPLE = `<script type="module" src="${ORIGIN}/sdk.js"></script>
+<script type="module">
+  // The module also registers a window.FormatConvert global
+  const { blob, filename } = await window.FormatConvert.convert(file, 'md')
+</script>`
+
+const EMBED_EXAMPLE = `<iframe
+  src="${ORIGIN}/embed?from=pdf&to=md"
+  width="480" height="420" style="border:0; border-radius:12px"
+></iframe>
+
+<script>
+  // Receive the converted file from the iframe
+  window.addEventListener('message', (event) => {
+    if (event.origin !== '${ORIGIN}') return
+    if (event.data?.type !== 'formatconvert:result') return
+    const { blob, filename, from, to } = event.data
+    // blob is a real Blob — save it, upload it, read it
+  })
+</script>`
+
+export default function Developers() {
+  const conversions = listConversions()
+  const sources = [...new Set(conversions.map((c) => c.from))]
+
+  return (
+    <div className="docs">
+      <header className="header">
+        <h1>Developer API</h1>
+        <p>
+          Use every FormatConvert conversion in your own site or app with one import. The SDK runs
+          entirely in the user&apos;s browser — no uploads, no API keys, no rate limits, no backend.
+        </p>
+      </header>
+
+      <section className="section">
+        <h2>Quick start</h2>
+        <p>
+          Import the SDK straight from <code>{ORIGIN}/sdk.js</code> — no install step, no build
+          tooling required:
+        </p>
+        <CodeBlock code={QUICKSTART} />
+        <p>
+          <code>convert(file, to, options?)</code> returns{' '}
+          <code>{'Promise<{ blob, filename, from, to }>'}</code>. The input format is detected from
+          the file&apos;s magic bytes; pass <code>options.from</code> to override it.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Conversion options</h2>
+        <CodeBlock code={OPTIONS_EXAMPLE} />
+        <table className="docs-table">
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Applies to</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>pageSize</code></td><td>any → PDF</td><td><code>'a4'</code> (default) or <code>'letter'</code></td></tr>
+            <tr><td><code>quality</code></td><td>→ JPEG / WebP</td><td>0.1 – 1, default 0.92</td></tr>
+            <tr><td><code>width</code></td><td>image → image</td><td>Resize to this width in px, aspect kept</td></tr>
+            <tr><td><code>background</code></td><td>→ JPEG / BMP</td><td>Fill for transparent areas, default <code>#ffffff</code></td></tr>
+            <tr><td><code>sizes</code></td><td>→ ICO</td><td>Array of icon sizes, default <code>[16, 32, 48]</code>, max 256</td></tr>
+            <tr><td><code>scale</code></td><td>PDF → image</td><td>Render resolution multiplier: 1, 2 (default) or 3</td></tr>
+            <tr><td><code>from</code></td><td>all</td><td>Force the input format instead of auto-detecting</td></tr>
+            <tr><td><code>onProgress</code></td><td>all</td><td>Callback receiving <code>{'{ page, total, stage }'}</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="section">
+        <h2>Detection &amp; capability discovery</h2>
+        <CodeBlock code={DETECT_EXAMPLE} />
+      </section>
+
+      <section className="section">
+        <h2>Global build</h2>
+        <p>Prefer not to use import statements? The module also registers a global:</p>
+        <CodeBlock code={GLOBAL_EXAMPLE} />
+      </section>
+
+      <section className="section">
+        <h2>Drop-in iframe widget</h2>
+        <p>
+          Want the full UI without writing any conversion code? Embed the converter and listen for
+          the result:
+        </p>
+        <CodeBlock code={EMBED_EXAMPLE} />
+        <p>
+          Query params: <code>from</code> and <code>to</code> select the conversion (defaults:{' '}
+          <code>pdf</code> → <code>txt</code>).
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Supported conversions</h2>
+        <p>Generated live from the converter registry — this table is always accurate.</p>
+        <table className="docs-table matrix">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>To</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sources.map((from) => (
+              <tr key={from}>
+                <td>
+                  <strong>{FORMATS[from].label}</strong>
+                </td>
+                <td>
+                  {conversions
+                    .filter((c) => c.from === from)
+                    .map((c) => FORMATS[c.to].label)
+                    .join(', ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="section">
+        <h2>Notes</h2>
+        <ul className="docs-notes">
+          <li>
+            <strong>Privacy:</strong> conversions run in the browser via WebAssembly-free JS —
+            files are never sent to our servers (there are none).
+          </li>
+          <li>
+            <strong>PDF worker:</strong> PDF conversions load{' '}
+            <code>{ORIGIN}/pdf.worker.min.mjs</code>. If your site&apos;s CSP blocks cross-origin
+            workers, pdf.js automatically falls back to main-thread processing.
+          </li>
+          <li>
+            <strong>Browser support:</strong> evergreen browsers (Chrome, Edge, Firefox, Safari
+            16+). WebP encoding requires Chrome/Edge/Firefox.
+          </li>
+          <li>
+            <strong>Output-only note:</strong> GIF, SVG and HEIC are supported as inputs; browsers
+            cannot encode them, so they are not offered as outputs.
+          </li>
+        </ul>
+      </section>
+    </div>
+  )
+}
