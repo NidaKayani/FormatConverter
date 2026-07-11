@@ -10,15 +10,22 @@ No server, no uploads: every conversion is a real parse + re-render done locally
 
 | From | To |
 | --- | --- |
-| PDF | TXT, Markdown, HTML, PNG, JPEG |
-| TXT | PDF, Markdown, HTML |
-| Markdown | PDF, TXT, HTML |
-| HTML | PDF, Markdown, TXT |
+| PDF | TXT, Markdown, HTML, Word, PNG, JPEG |
+| Word (DOCX) | PDF, Markdown, TXT, HTML |
+| TXT | PDF, Markdown, HTML, Word |
+| Markdown | PDF, TXT, HTML, Word |
+| HTML | PDF, Markdown, TXT, Word |
 
 - PDF → text rebuilds lines from character positions so columns and tables stay readable.
 - PDF → Markdown infers headings from font sizes, keeps bold text, and detects bullet lists.
 - Markdown/HTML → PDF is typeset by a custom layout engine on jsPDF: headings, lists, tables,
   fenced code blocks, blockquotes, links, page numbers, word wrap and page breaks.
+- Word documents are parsed with `mammoth` on the way in and generated as real .docx
+  (headings, lists, tables, hyperlinks, code shading) with the `docx` library on the way out.
+
+**OCR** — scanned PDFs with no text layer automatically fall back to Tesseract (wasm, fully
+self-hosted under `/tesseract/`), and photos/scans convert directly to text
+(PNG/JPEG/WebP/BMP/GIF/HEIC → TXT). English is bundled; other languages stream on first use.
 
 **Images** — full decode → canvas → re-encode with quality/resize options:
 
@@ -28,6 +35,13 @@ No server, no uploads: every conversion is a real parse + re-render done locally
 
 BMP and ICO encoders are written by hand (browsers can't encode them), HEIC is decoded with
 `heic2any`, and PDF pages can be rasterized to images (multi-page → zip).
+
+**Batch** — drop any number of files on a converter page; each converts independently with a
+per-file queue, and results download individually or as one zip. Also in the SDK as
+`convertMany()` + `zipResults()`.
+
+**PWA** — installable, works fully offline (app shell precached; OCR assets cached on first
+use). Paste input with Ctrl+V; last-used options are remembered per conversion.
 
 ## Routes
 
@@ -58,7 +72,12 @@ Requires Node.js 18+.
 ```bash
 npm install
 npm run dev        # app at http://localhost:5173
+npm run e2e        # browser end-to-end suite (uses your installed Chrome, needs `npm run build` + `npm run preview` running)
 ```
+
+`predev`/`prebuild` copy the Tesseract OCR runtime (worker, wasm cores, English data) from
+node_modules into `public/tesseract/` — that directory is generated, gitignored, and safe to
+delete.
 
 ## Build & deploy
 

@@ -41,7 +41,7 @@ export default function Dropzone({ accept, hint, onFile, onFiles, multiple = fal
       <p className="dropzone-text">{hint || 'Drag & drop a file, or click to browse'}</p>
       <p className="dropzone-subtext">
         Converted locally in your browser — nothing is uploaded.
-        {multiple ? ' Drop multiple files to batch-convert.' : ''}
+        {multiple ? ' Drop multiple files to batch-convert, or paste with Ctrl+V.' : ''}
       </p>
       {error && <p className="error">{error}</p>}
     </div>

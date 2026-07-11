@@ -56,7 +56,27 @@ const ico = await convert(logo, 'ico', { sizes: [16, 32, 48] })
 const images = await convert(pdfFile, 'png', {
   scale: 3,
   onProgress: ({ page, total }) => console.log(\`page \${page}/\${total}\`),
-})`
+})
+
+// Word → Markdown, and Markdown → a real .docx
+const md = await convert(docxFile, 'md')
+const docx = await convert(mdFile, 'docx')
+
+// A photo of text → the text itself (OCR runs locally too)
+const text = await convert(photoOfReceipt, 'txt', { ocrLanguage: 'eng' })`
+
+const BATCH_EXAMPLE = `import { convertMany, zipResults } from '${ORIGIN}/sdk.js'
+
+const results = await convertMany(fileList, 'pdf', {
+  onProgress: ({ fileIndex, fileCount, page, total }) =>
+    console.log(\`file \${fileIndex + 1}/\${fileCount}\`),
+})
+
+// results: [{ file, ok, result?, error? }] — one failure doesn't stop the rest
+const failed = results.filter((r) => !r.ok)
+
+// Bundle everything that succeeded into one zip
+const { blob, filename } = await zipResults(results, 'converted.zip')`
 
 const DETECT_EXAMPLE = `import { detectFormat, targetsFor, listConversions, FORMATS } from '${ORIGIN}/sdk.js'
 
@@ -132,10 +152,18 @@ export default function Developers() {
             <tr><td><code>background</code></td><td>→ JPEG / BMP</td><td>Fill for transparent areas, default <code>#ffffff</code></td></tr>
             <tr><td><code>sizes</code></td><td>→ ICO</td><td>Array of icon sizes, default <code>[16, 32, 48]</code>, max 256</td></tr>
             <tr><td><code>scale</code></td><td>PDF → image</td><td>Render resolution multiplier: 1, 2 (default) or 3</td></tr>
+            <tr><td><code>ocr</code></td><td>PDF → text formats</td><td><code>'auto'</code> (default: OCR scanned PDFs with no text layer) or <code>'off'</code></td></tr>
+            <tr><td><code>ocrLanguage</code></td><td>OCR conversions</td><td>Tesseract language code, default <code>'eng'</code> (bundled); others stream on first use</td></tr>
             <tr><td><code>from</code></td><td>all</td><td>Force the input format instead of auto-detecting</td></tr>
             <tr><td><code>onProgress</code></td><td>all</td><td>Callback receiving <code>{'{ page, total, stage }'}</code></td></tr>
           </tbody>
         </table>
+      </section>
+
+      <section className="section">
+        <h2>Batch conversion</h2>
+        <p>Convert many files at once and bundle the results:</p>
+        <CodeBlock code={BATCH_EXAMPLE} />
       </section>
 
       <section className="section">
@@ -201,6 +229,16 @@ export default function Developers() {
             <strong>PDF worker:</strong> PDF conversions load{' '}
             <code>{ORIGIN}/pdf.worker.min.mjs</code>. If your site&apos;s CSP blocks cross-origin
             workers, pdf.js automatically falls back to main-thread processing.
+          </li>
+          <li>
+            <strong>OCR:</strong> scanned PDFs and photos of text are recognized locally with
+            Tesseract (wasm), self-hosted from <code>{ORIGIN}/tesseract/</code>. First OCR use
+            downloads ~8 MB of engine + English data, cached afterwards. Other languages stream
+            from the tesseract.js data CDN.
+          </li>
+          <li>
+            <strong>Install as an app:</strong> the site is a PWA — installed, it converts fully
+            offline (OCR too, once its assets have been cached).
           </li>
           <li>
             <strong>Browser support:</strong> evergreen browsers (Chrome, Edge, Firefox, Safari

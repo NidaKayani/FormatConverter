@@ -92,6 +92,33 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFile])
 
+  // Paste support: Ctrl+V an image or text straight into the converter
+  useEffect(() => {
+    if (status !== 'idle' && status !== 'error') return
+    const onPaste = (e) => {
+      const items = Array.from(e.clipboardData?.items || [])
+      const fileItem = items.find((i) => i.kind === 'file')
+      if (fileItem) {
+        const f = fileItem.getAsFile()
+        if (f) {
+          const ext = FORMATS[from].exts[0]
+          handleFiles([f.name ? f : new File([f], `pasted.${ext}`, { type: f.type })])
+          return
+        }
+      }
+      const text = e.clipboardData?.getData('text')
+      const isTextFormat = ['txt', 'md', 'html'].includes(from)
+      if (text?.trim() && isTextFormat) {
+        handleFiles([
+          new File([text], `pasted.${FORMATS[from].exts[0]}`, { type: FORMATS[from].mime }),
+        ])
+      }
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, from])
+
   const reset = () => {
     setFiles([])
     setResult(null)
