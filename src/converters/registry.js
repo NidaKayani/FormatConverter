@@ -6,6 +6,17 @@
  * the code (pdf.js, jsPDF, heic decoder, ...) a given conversion needs.
  */
 
+/** Ordered kind sections for Home and the Developers matrix. */
+export const KINDS = [
+  { id: 'document', label: 'Documents' },
+  { id: 'image', label: 'Images' },
+  { id: 'data', label: 'Data' },
+  { id: 'ebook', label: 'Ebooks' },
+  { id: 'subtitle', label: 'Subtitles' },
+  { id: 'audio', label: 'Audio' },
+  { id: 'video', label: 'Video' },
+]
+
 export const FORMATS = {
   pdf:  { label: 'PDF',      kind: 'document', exts: ['pdf'], mime: 'application/pdf', input: true, output: true },
   txt:  { label: 'Text',     kind: 'document', exts: ['txt', 'text', 'log'], mime: 'text/plain', input: true, output: true },
@@ -17,9 +28,28 @@ export const FORMATS = {
   webp: { label: 'WebP',     kind: 'image', exts: ['webp'], mime: 'image/webp', input: true, output: true },
   bmp:  { label: 'BMP',      kind: 'image', exts: ['bmp'], mime: 'image/bmp', input: true, output: true },
   ico:  { label: 'ICO',      kind: 'image', exts: ['ico'], mime: 'image/x-icon', input: true, output: true },
-  gif:  { label: 'GIF',      kind: 'image', exts: ['gif'], mime: 'image/gif', input: true, output: false },
+  gif:  { label: 'GIF',      kind: 'image', exts: ['gif'], mime: 'image/gif', input: true, output: true },
   svg:  { label: 'SVG',      kind: 'image', exts: ['svg'], mime: 'image/svg+xml', input: true, output: false },
   heic: { label: 'HEIC',     kind: 'image', exts: ['heic', 'heif'], mime: 'image/heic', input: true, output: false },
+  tiff: { label: 'TIFF',     kind: 'image', exts: ['tiff', 'tif'], mime: 'image/tiff', input: true, output: true },
+  avif: { label: 'AVIF',     kind: 'image', exts: ['avif'], mime: 'image/avif', input: true, output: true },
+  csv:  { label: 'CSV',      kind: 'data', exts: ['csv'], mime: 'text/csv', input: true, output: true },
+  tsv:  { label: 'TSV',      kind: 'data', exts: ['tsv', 'tab'], mime: 'text/tab-separated-values', input: true, output: true },
+  xlsx: { label: 'Excel',    kind: 'data', exts: ['xlsx'], mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', input: true, output: true },
+  json: { label: 'JSON',     kind: 'data', exts: ['json'], mime: 'application/json', input: true, output: true },
+  yaml: { label: 'YAML',     kind: 'data', exts: ['yaml', 'yml'], mime: 'application/yaml', input: true, output: true },
+  xml:  { label: 'XML',      kind: 'data', exts: ['xml'], mime: 'application/xml', input: true, output: true },
+  epub: { label: 'EPUB',     kind: 'ebook', exts: ['epub'], mime: 'application/epub+zip', input: true, output: true },
+  srt:  { label: 'SRT',      kind: 'subtitle', exts: ['srt'], mime: 'application/x-subrip', input: true, output: true },
+  vtt:  { label: 'VTT',      kind: 'subtitle', exts: ['vtt'], mime: 'text/vtt', input: true, output: true },
+  mp3:  { label: 'MP3',      kind: 'audio', exts: ['mp3'], mime: 'audio/mpeg', input: true, output: true },
+  wav:  { label: 'WAV',      kind: 'audio', exts: ['wav'], mime: 'audio/wav', input: true, output: true },
+  ogg:  { label: 'OGG',      kind: 'audio', exts: ['ogg', 'oga'], mime: 'audio/ogg', input: true, output: true },
+  flac: { label: 'FLAC',     kind: 'audio', exts: ['flac'], mime: 'audio/flac', input: true, output: true },
+  m4a:  { label: 'M4A',      kind: 'audio', exts: ['m4a'], mime: 'audio/mp4', input: true, output: true },
+  mp4:  { label: 'MP4',      kind: 'video', exts: ['mp4'], mime: 'video/mp4', input: true, output: true },
+  webm: { label: 'WebM',     kind: 'video', exts: ['webm'], mime: 'video/webm', input: true, output: false },
+  mov:  { label: 'MOV',      kind: 'video', exts: ['mov'], mime: 'video/quicktime', input: true, output: false },
 }
 
 // ---------------------------------------------------------------------------
@@ -75,12 +105,20 @@ const OPT_SCALE = {
   choices: [{ value: 1, label: '1× (72 dpi)' }, { value: 2, label: '2× (144 dpi)' }, { value: 3, label: '3× (216 dpi)' }],
   help: 'Resolution multiplier when rasterizing PDF pages.',
 }
+const OPT_SHEET = {
+  key: 'sheet', label: 'Sheets', type: 'select', default: 'first',
+  choices: [
+    { value: 'first', label: 'First sheet only' },
+    { value: 'all', label: 'All sheets (zip / sections)' },
+  ],
+  help: 'Which worksheets to include when reading an Excel workbook.',
+}
 
 function imageOutputOptions(to) {
   if (to === 'ico') return [OPT_ICO_SIZES]
   const opts = [OPT_WIDTH]
-  if (to === 'jpg' || to === 'webp') opts.push(OPT_QUALITY)
-  if (to === 'jpg' || to === 'bmp') opts.push(OPT_BACKGROUND)
+  if (to === 'jpg' || to === 'webp' || to === 'avif') opts.push(OPT_QUALITY)
+  if (to === 'jpg' || to === 'bmp' || to === 'gif') opts.push(OPT_BACKGROUND)
   return opts
 }
 
@@ -90,8 +128,21 @@ function imageOutputOptions(to) {
 
 const CONVERSIONS = {}
 
-function register(from, to, load, options = []) {
-  ;(CONVERSIONS[from] ??= {})[to] = { from, to, load, options }
+/**
+ * @param {string} from
+ * @param {string} to
+ * @param {() => Promise<{ default: Function }>} load
+ * @param {object[]} [options]
+ * @param {{ env?: 'main'|'worker' }} [meta]
+ */
+function register(from, to, load, options = [], meta = {}) {
+  ;(CONVERSIONS[from] ??= {})[to] = {
+    from,
+    to,
+    load,
+    options,
+    env: meta.env || 'main',
+  }
 }
 
 // Documents — every direction is a real parse/render, never a rename.
@@ -100,11 +151,11 @@ register('pdf', 'txt', () => import('./docs/pdfToTxt.js'), [OPT_OCR, OPT_OCR_LAN
 register('pdf', 'md', () => import('./docs/pdfToMd.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
 register('pdf', 'html', () => import('./docs/pdfToHtml.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
 register('txt', 'pdf', () => import('./docs/textToPdf.js'), [OPT_PAGE_SIZE])
-register('txt', 'md', () => import('./docs/txtToMd.js'))
+register('txt', 'md', () => import('./docs/txtToMd.js'), [], { env: 'worker' })
 register('txt', 'html', () => import('./docs/txtToHtml.js'))
 register('md', 'pdf', () => import('./docs/mdToPdf.js'), [OPT_PAGE_SIZE])
 register('md', 'txt', () => import('./docs/mdToTxt.js'))
-register('md', 'html', () => import('./docs/mdToHtml.js'))
+register('md', 'html', () => import('./docs/mdToHtml.js'), [], { env: 'worker' })
 register('html', 'pdf', () => import('./docs/htmlToPdf.js'), [OPT_PAGE_SIZE])
 register('html', 'md', () => import('./docs/htmlToMd.js'))
 register('html', 'txt', () => import('./docs/htmlToTxt.js'))
@@ -120,7 +171,7 @@ register('html', 'docx', () => import('./docs/htmlToDocx.js'))
 register('pdf', 'docx', () => import('./docs/pdfToDocx.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
 
 // OCR: photos/scans → text
-for (const from of ['png', 'jpg', 'webp', 'bmp', 'gif', 'heic']) {
+for (const from of ['png', 'jpg', 'webp', 'bmp', 'gif', 'heic', 'tiff', 'avif']) {
   register(from, 'txt', () => import('./ocr/imageToTxt.js'), [OPT_OCR_LANGUAGE])
 }
 
@@ -129,8 +180,8 @@ register('pdf', 'png', () => import('./images/pdfToImages.js'), [OPT_SCALE])
 register('pdf', 'jpg', () => import('./images/pdfToImages.js'), [OPT_SCALE, OPT_QUALITY])
 
 // Images — decode to canvas, transform, re-encode.
-const IMAGE_INPUTS = ['png', 'jpg', 'webp', 'bmp', 'gif', 'svg', 'heic', 'ico']
-const IMAGE_OUTPUTS = ['png', 'jpg', 'webp', 'bmp', 'ico']
+const IMAGE_INPUTS = ['png', 'jpg', 'webp', 'bmp', 'gif', 'svg', 'heic', 'ico', 'tiff', 'avif']
+const IMAGE_OUTPUTS = ['png', 'jpg', 'webp', 'bmp', 'ico', 'gif', 'tiff', 'avif']
 for (const from of IMAGE_INPUTS) {
   for (const to of IMAGE_OUTPUTS) {
     if (from === to) continue
@@ -138,6 +189,61 @@ for (const from of IMAGE_INPUTS) {
   }
   register(from, 'pdf', () => import('./images/imageToPdf.js'), [OPT_PAGE_SIZE])
 }
+
+// Data formats — tabular IR + tree bridging (worker-safe except →pdf/docx)
+const DATA = ['csv', 'tsv', 'xlsx', 'json', 'yaml', 'xml']
+const DATA_DOC_OUT = ['md', 'html', 'txt', 'pdf', 'docx']
+const loadData = () => import('./data/convert.js')
+for (const from of DATA) {
+  for (const to of DATA) {
+    if (from === to) continue
+    const opts = from === 'xlsx' ? [OPT_SHEET] : []
+    register(from, to, loadData, opts, { env: 'worker' })
+  }
+  for (const to of DATA_DOC_OUT) {
+    const opts = from === 'xlsx' ? [OPT_SHEET] : []
+    if (to === 'pdf') opts.push(OPT_PAGE_SIZE)
+    const env = to === 'pdf' || to === 'docx' ? 'main' : 'worker'
+    register(from, to, loadData, opts, { env })
+  }
+}
+
+// Ebooks
+register('epub', 'html', () => import('./ebook/epubIn.js'))
+register('epub', 'md', () => import('./ebook/epubIn.js'))
+register('epub', 'txt', () => import('./ebook/epubIn.js'))
+register('epub', 'pdf', () => import('./ebook/epubIn.js'), [OPT_PAGE_SIZE])
+register('epub', 'docx', () => import('./ebook/epubIn.js'))
+register('md', 'epub', () => import('./ebook/epubOut.js'), [], { env: 'worker' })
+register('txt', 'epub', () => import('./ebook/epubOut.js'), [], { env: 'worker' })
+register('html', 'epub', () => import('./ebook/epubOut.js'), [], { env: 'worker' })
+register('docx', 'epub', () => import('./ebook/epubOut.js'))
+
+// Subtitles
+register('srt', 'vtt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+register('srt', 'txt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+register('vtt', 'srt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+register('vtt', 'txt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+register('txt', 'srt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+register('txt', 'vtt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+
+// Audio (ffmpeg.wasm — main thread; ffmpeg owns its worker)
+const AUDIO = ['mp3', 'wav', 'ogg', 'flac', 'm4a']
+for (const from of AUDIO) {
+  for (const to of AUDIO) {
+    if (from === to) continue
+    register(from, to, () => import('./av/audio.js'))
+  }
+}
+
+// Video — inputs mp4/webm/mov/gif → mp4 / gif / audio extract
+for (const from of ['mp4', 'webm', 'mov']) {
+  register(from, 'mp4', () => import('./av/video.js'))
+  register(from, 'gif', () => import('./av/videoToGif.js'))
+  register(from, 'mp3', () => import('./av/video.js'))
+  register(from, 'wav', () => import('./av/video.js'))
+}
+register('gif', 'mp4', () => import('./av/video.js'))
 
 export function getConversion(from, to) {
   return CONVERSIONS[from]?.[to] || null
@@ -161,4 +267,11 @@ export function listConversions() {
 export function acceptFor(from) {
   const fmt = FORMATS[from]
   return [fmt.mime, ...fmt.exts.map((e) => `.${e}`)].join(',')
+}
+
+/** Input format keys that have at least one conversion, for a given kind. */
+export function sourcesForKind(kindId) {
+  return Object.keys(FORMATS).filter(
+    (key) => FORMATS[key].kind === kindId && FORMATS[key].input && targetsFor(key).length > 0
+  )
 }

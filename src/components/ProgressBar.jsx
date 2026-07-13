@@ -4,15 +4,17 @@ const STAGE_LABELS = {
   ocr: 'Recognizing text — page',
   decode: 'Decoding image…',
   encode: 'Encoding output…',
+  engine: 'Loading conversion engine…',
 }
 
 export default function ProgressBar({ progress }) {
-  const { page = 0, total = 0, stage, fileIndex, fileCount, file } = progress || {}
+  const { page = 0, total = 0, stage, fileIndex, fileCount, file, message } = progress || {}
   const pct = total ? (page / total) * 100 : undefined
   let label =
-    total > 0
+    message ||
+    (total > 0
       ? `${STAGE_LABELS[stage] || 'Processing page'} ${page} of ${total}`
-      : STAGE_LABELS[stage] || 'Converting…'
+      : STAGE_LABELS[stage] || 'Converting…')
   if (fileCount > 1) {
     label = `File ${fileIndex + 1} of ${fileCount} (${file?.name}) — ${label}`
   }

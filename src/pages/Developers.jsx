@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FORMATS, listConversions } from '../converters/index.js'
+import { FORMATS, listConversions, KINDS, listTools } from '../converters/index.js'
 
 const ORIGIN = 'https://formatconvert.quantumlogicslimited.com'
 
@@ -108,7 +108,11 @@ const EMBED_EXAMPLE = `<iframe
 
 export default function Developers() {
   const conversions = listConversions()
+  const tools = listTools()
   const sources = [...new Set(conversions.map((c) => c.from))]
+  const kindsWithSources = KINDS.filter((kind) =>
+    sources.some((from) => FORMATS[from].kind === kind.id)
+  )
 
   return (
     <div className="docs">
@@ -193,37 +197,78 @@ export default function Developers() {
       <section className="section">
         <h2>Supported conversions</h2>
         <p>Generated live from the converter registry — this table is always accurate.</p>
-        <table className="docs-table matrix">
-          <thead>
-            <tr>
-              <th>From</th>
-              <th>To</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sources.map((from) => (
-              <tr key={from}>
-                <td>
-                  <strong>{FORMATS[from].label}</strong>
-                </td>
-                <td>
-                  {conversions
-                    .filter((c) => c.from === from)
-                    .map((c) => FORMATS[c.to].label)
-                    .join(', ')}
-                </td>
-              </tr>
+        {kindsWithSources.map((kind) => {
+          const kindSources = sources.filter((from) => FORMATS[from].kind === kind.id)
+          return (
+            <div key={kind.id} data-kind={kind.id}>
+              <h3>{kind.label}</h3>
+              <table className="docs-table matrix">
+                <thead>
+                  <tr>
+                    <th>From</th>
+                    <th>To</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kindSources.map((from) => (
+                    <tr key={from}>
+                      <td>
+                        <strong>{FORMATS[from].label}</strong>
+                      </td>
+                      <td>
+                        {conversions
+                          .filter((c) => c.from === from)
+                          .map((c) => FORMATS[c.to].label)
+                          .join(', ')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        })}
+      </section>
+
+      <section className="section">
+        <h2>Tools API</h2>
+        <p>
+          Multi-input operations (merge, split, combine) use <code>runTool</code> /{' '}
+          <code>listTools</code> — additive to <code>convert()</code>, which stays one-file in /
+          one-file out.
+        </p>
+        <CodeBlock
+          code={`import { runTool, listTools } from '${ORIGIN}/sdk.js'
+
+const tools = listTools() // [{ id, label, description, inputs, output, options }]
+const { blob, filename } = await runTool('merge-pdf', pdfFiles)`}
+        />
+        {tools.length === 0 ? (
+          <p className="meta">No multi-input tools registered yet — coming in later v4 phases.</p>
+        ) : (
+          <ul className="docs-notes">
+            {tools.map((t) => (
+              <li key={t.id}>
+                <code>{t.id}</code> — {t.label}: {t.description}
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+        )}
       </section>
 
       <section className="section">
         <h2>Notes</h2>
         <ul className="docs-notes">
           <li>
-            <strong>Privacy:</strong> conversions run in the browser via WebAssembly-free JS —
-            files are never sent to our servers (there are none).
+            <strong>Privacy:</strong> conversions run entirely in the browser — including WebAssembly
+            engines for OCR (Tesseract), AVIF, and audio/video (ffmpeg.wasm). Files are never sent to
+            our servers (there are none).
+          </li>
+          <li>
+            <strong>SDK threading:</strong> the public <code>/sdk.js</code> bundle always runs
+            converters on the main thread. Cross-origin module workers are not constructible, so
+            worker routing is app-only. Heavy work (pdf.js, Tesseract, ffmpeg) still uses each
+            library&apos;s own workers where available.
           </li>
           <li>
             <strong>PDF worker:</strong> PDF conversions load{' '}
@@ -237,16 +282,28 @@ export default function Developers() {
             from the tesseract.js data CDN.
           </li>
           <li>
+            <strong>Data formats:</strong> CSV/TSV/XLSX use a shared tabular model. JSON/YAML/XML
+            preserve tree types when converting among themselves; non-tabular trees refuse
+            table targets with an actionable error. XML attributes use the <code>@_</code> prefix.
+            TIFF encode is uncompressed.
+          </li>
+          <li>
+            <strong>Audio &amp; video:</strong> powered by single-thread ffmpeg.wasm (~31 MB,
+            downloaded once from <code>{ORIGIN}/ffmpeg/</code>). Keep media under ~500 MB. WebM is
+            accepted as input; output matrix follows codecs present in the bundled core.
+          </li>
+          <li>
             <strong>Install as an app:</strong> the site is a PWA — installed, it converts fully
-            offline (OCR too, once its assets have been cached).
+            offline (OCR and ffmpeg too, once their assets have been cached). Share Target opens
+            shared files in the home detector.
           </li>
           <li>
             <strong>Browser support:</strong> evergreen browsers (Chrome, Edge, Firefox, Safari
-            16+). WebP encoding requires Chrome/Edge/Firefox.
+            16+). AVIF encode and some media codecs vary by browser.
           </li>
           <li>
-            <strong>Output-only note:</strong> GIF, SVG and HEIC are supported as inputs; browsers
-            cannot encode them, so they are not offered as outputs.
+            <strong>Input-only note:</strong> SVG, HEIC, WebM and MOV are supported as inputs where
+            listed; outputs depend on what browsers / codecs can produce.
           </li>
         </ul>
       </section>

@@ -1,6 +1,17 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { getPreferredTheme, initTheme, toggleTheme } from '../lib/theme.js'
+import InstallPrompt from './InstallPrompt.jsx'
 
 export default function Layout() {
+  const [theme, setTheme] = useState(() => getPreferredTheme())
+
+  useEffect(() => {
+    setTheme(initTheme())
+  }, [])
+
+  const onToggle = () => setTheme(toggleTheme())
+
   return (
     <div className="app">
       <nav className="nav">
@@ -17,10 +28,19 @@ export default function Layout() {
             Converters
           </NavLink>
           <NavLink to="/developers">Developer API</NavLink>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={onToggle}
+            aria-label="Toggle color theme"
+          >
+            {theme === 'light' ? 'Dark' : 'Light'}
+          </button>
         </div>
       </nav>
 
       <Outlet />
+      <InstallPrompt />
 
       <footer className="footer">
         <p>

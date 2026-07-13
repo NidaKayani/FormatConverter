@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://formatconvert.quantumlogicslimited.com/sitemap.xml

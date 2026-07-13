@@ -36,6 +36,18 @@ export async function encodeCanvas(canvas, to, options = {}) {
 
   if (to === 'bmp') return encodeBmp(prepared)
   if (to === 'ico') return encodeIco(prepared, options.sizes)
+  if (to === 'gif') {
+    const { encodeGif } = await import('./gifEncode.js')
+    return encodeGif(prepared, options)
+  }
+  if (to === 'tiff') {
+    const { encodeTiff } = await import('./tiff.js')
+    return encodeTiff(prepared, options)
+  }
+  if (to === 'avif') {
+    const { encodeAvifFile } = await import('./avif.js')
+    return encodeAvifFile(prepared, options)
+  }
 
   const mime = CANVAS_MIME[to]
   if (!mime) throw new Error(`Cannot encode to ${to} in the browser.`)

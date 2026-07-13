@@ -7,9 +7,9 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "predev": "node scripts/copy-ocr-assets.mjs",
+    "predev": "node scripts/copy-assets.mjs && node scripts/generate-sitemap.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/copy-ocr-assets.mjs",
+    "prebuild": "node scripts/copy-assets.mjs && node scripts/generate-sitemap.mjs",
     "build": "vite build && vite build --config vite.sdk.config.js",
     "e2e": "node tests/e2e.mjs",
     "build:app": "vite build",
@@ -17,19 +17,30 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@jsquash/avif": "^2.1.1",
     "docx": "^9.7.1",
+    "fast-xml-parser": "^5.10.0",
+    "gifenc": "^1.0.3",
     "heic2any": "^0.0.4",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
     "marked": "^18.0.6",
+    "papaparse": "^5.5.4",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "6.1.200",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-router-dom": "^7.18.1",
     "tesseract.js": "^7.0.0",
     "turndown": "^7.2.4",
-    "turndown-plugin-gfm": "^1.0.2"
+    "turndown-plugin-gfm": "^1.0.2",
+    "utif2": "^4.1.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@tesseract.js-data/eng": "^1.0.0",

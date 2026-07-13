@@ -1,11 +1,44 @@
-import { FORMATS, getConversion, targetsFor, listConversions } from './registry.js'
+import { FORMATS, getConversion, targetsFor, listConversions, KINDS, sourcesForKind } from './registry.js'
 import { detectFormat } from './detect.js'
+import { getTool, listTools as listRegisteredTools, TOOLS } from './tools.js'
 
-export { FORMATS, targetsFor, listConversions, detectFormat, getConversion }
+export {
+  FORMATS,
+  KINDS,
+  targetsFor,
+  listConversions,
+  detectFormat,
+  getConversion,
+  sourcesForKind,
+  getTool,
+  TOOLS,
+}
 
 function baseName(name = 'converted') {
   const i = name.lastIndexOf('.')
   return i > 0 ? name.slice(0, i) : name
+}
+
+async function runOnMain(entry, file, from, to, opts, onProgress) {
+  const mod = await entry.load()
+  return mod.default(file, { ...opts, from, to }, onProgress || (() => {}))
+}
+
+async function runViaWorker(entry, file, from, to, opts, onProgress) {
+  const { convertInWorker } = await import('../workers/rpc.js')
+  const buffer = await file.arrayBuffer()
+  const out = await convertInWorker(
+    {
+      buffer,
+      name: file.name || 'input',
+      type: file.type || '',
+      from,
+      to,
+      opts,
+    },
+    onProgress
+  )
+  return { blob: new Blob([out.buffer], { type: out.type }), ext: out.ext }
 }
 
 /**
@@ -34,8 +67,18 @@ export async function convert(file, to, options = {}) {
     throw new Error(`Conversion ${FORMATS[from].label} → ${FORMATS[to].label} is not supported.`)
   }
 
-  const mod = await entry.load()
-  const result = await mod.default(file, { ...opts, from, to }, onProgress || (() => {}))
+  const report = onProgress || (() => {})
+  let result
+  const useWorker = entry.env === 'worker' && typeof __SDK__ !== 'undefined' && !__SDK__
+  if (useWorker) {
+    try {
+      result = await runViaWorker(entry, file, from, to, opts, report)
+    } catch {
+      result = await runOnMain(entry, file, from, to, opts, report)
+    }
+  } else {
+    result = await runOnMain(entry, file, from, to, opts, report)
+  }
 
   // Converters return a Blob, or { blob, ext } when the container differs (e.g. zip)
   const blob = result instanceof Blob ? result : result.blob
@@ -88,4 +131,52 @@ export async function zipResults(results, zipName = 'converted.zip') {
   }
   const blob = await zip.generateAsync({ type: 'blob' })
   return { blob, filename: zipName }
+}
+
+/**
+ * Run a multi-input tool by id.
+ * @param {string} toolId
+ * @param {File[]|Blob[]} files
+ * @param {object} [options]
+ * @returns {Promise<{ blob: Blob, filename: string, tool: string }>}
+ */
+export async function runTool(toolId, files, options = {}) {
+  const tool = getTool(toolId)
+  if (!tool) throw new Error(`Unknown tool "${toolId}".`)
+
+  const list = Array.from(files || []).filter(Boolean)
+  const { min = 1, max = Infinity, formats, ordered } = tool.inputs || {}
+  if (list.length < min) {
+    throw new Error(`This tool needs at least ${min} file${min === 1 ? '' : 's'}.`)
+  }
+  if (list.length > max) {
+    throw new Error(`This tool accepts at most ${max} file${max === 1 ? '' : 's'}.`)
+  }
+  if (!ordered && list.length === 0) {
+    throw new Error('No input files given.')
+  }
+
+  if (formats?.length) {
+    for (const file of list) {
+      const detected = await detectFormat(file)
+      if (!formats.includes(detected)) {
+        const labels = formats.map((f) => FORMATS[f]?.label || f).join(', ')
+        throw new Error(`Expected ${labels} input, got ${FORMATS[detected]?.label || 'unknown'}.`)
+      }
+    }
+  }
+
+  const { onProgress, ...opts } = options
+  const mod = await tool.load()
+  const result = await mod.default(list, opts, onProgress || (() => {}))
+  const blob = result instanceof Blob ? result : result.blob
+  const ext = result instanceof Blob ? (FORMATS[tool.output]?.exts?.[0] || tool.output) : result.ext
+  const filename = result instanceof Blob
+    ? `${toolId}.${ext}`
+    : (result.filename || `${toolId}.${ext}`)
+  return { blob, filename, tool: toolId }
+}
+
+export function listTools() {
+  return listRegisteredTools()
 }

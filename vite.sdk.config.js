@@ -6,6 +6,9 @@ import { resolve } from 'node:path'
 // dist/sdk.js (all converters inlined), plus the pdf.js worker beside it so
 // PDF conversions work when the SDK is imported cross-origin.
 export default defineConfig({
+  define: {
+    __SDK__: true,
+  },
   plugins: [
     {
       name: 'copy-pdf-worker',

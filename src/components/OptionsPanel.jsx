@@ -47,6 +47,14 @@ export default function OptionsPanel({ schema, values, onChange }) {
               onChange={(e) => set(opt.key, e.target.value ? Number(e.target.value) : null)}
             />
           )}
+          {opt.type === 'text' && (
+            <input
+              type="text"
+              placeholder={opt.placeholder || ''}
+              value={values[opt.key] ?? ''}
+              onChange={(e) => set(opt.key, e.target.value)}
+            />
+          )}
           {opt.type === 'color' && (
             <input
               type="color"

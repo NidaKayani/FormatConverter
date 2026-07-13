@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    __SDK__: false,
+  },
   plugins: [
     react(),
     VitePWA({
@@ -22,12 +25,25 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        share_target: {
+          action: '/share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              {
+                name: 'file',
+                accept: ['*/*'],
+              },
+            ],
+          },
+        },
       },
       workbox: {
+        importScripts: ['sw-share-target.js'],
         globPatterns: ['**/*.{js,css,html,mjs,png,svg,ico}'],
-        // OCR assets (~13 MB) cache on first use instead of install time;
-        // sdk.js is for external consumers, not the app shell
-        globIgnores: ['tesseract/**', 'sdk.js'],
+        // OCR / AVIF / ffmpeg assets cache on first use; sdk + convert.worker stay off precache
+        globIgnores: ['tesseract/**', 'wasm/**', 'ffmpeg/**', 'sdk.js', 'assets/convert.worker-*.js'],
         maximumFileSizeToCacheInBytes: 2.5 * 1024 * 1024,
         navigateFallback: '/index.html',
         runtimeCaching: [
@@ -37,6 +53,15 @@ export default defineConfig({
             options: {
               cacheName: 'ocr-assets',
               expiration: { maxEntries: 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/ffmpeg/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ffmpeg-assets',
+              expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
@@ -63,6 +88,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
+    exclude: ['@jsquash/avif', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
     esbuildOptions: {
       target: 'esnext',
     },

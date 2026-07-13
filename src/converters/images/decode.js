@@ -8,6 +8,16 @@ export async function decodeImage(file, format) {
     blob = Array.isArray(converted) ? converted[0] : converted
   }
 
+  if (format === 'tiff') {
+    const { decodeTiff } = await import('./tiff.js')
+    return decodeTiff(file)
+  }
+
+  if (format === 'avif') {
+    const { decodeAvifFile } = await import('./avif.js')
+    return decodeAvifFile(file)
+  }
+
   if (format === 'svg') return decodeSvg(file)
 
   // ICO isn't supported by createImageBitmap; browsers decode it via <img>.

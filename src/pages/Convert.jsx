@@ -3,7 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { FORMATS, getConversion } from '../converters/index.js'
 import { takePendingFile } from '../lib/pendingFile.js'
 import ConverterWidget from '../components/ConverterWidget.jsx'
+import Seo from '../components/Seo.jsx'
 import NotFound from './NotFound.jsx'
+
+const ORIGIN = 'https://formatconvert.quantumlogicslimited.com'
 
 const DESCRIPTIONS = {
   'pdf-txt': 'Extracts real text using each character’s position on the page, so columns, tables and paragraphs stay readable.',
@@ -16,33 +19,59 @@ const DESCRIPTIONS = {
   'pdf-jpg': 'Renders each PDF page to a high-resolution image. Multi-page PDFs download as a zip.',
 }
 
+const KIND_FALLBACK = {
+  image: 'Full decode and re-encode with quality and size options — a true pixel-level conversion.',
+  data: 'Parses your data into a tabular model (or preserves tree shape for JSON/YAML/XML) and re-serializes — entirely in your browser.',
+  ebook: 'Reads or builds EPUB 3 packages with real chapter structure — nothing uploaded.',
+  subtitle: 'Converts subtitle cues with accurate timestamps — SRT, VTT, and plain text.',
+  audio: 'Transcodes audio with ffmpeg.wasm running locally in your browser (~31 MB engine, cached after first use).',
+  video: 'Transcodes or extracts from video with ffmpeg.wasm — keep files under ~500 MB for best results.',
+  document: 'A real structural conversion, processed entirely in your browser.',
+}
+
+function describe(from, to) {
+  const key = `${from}-${to}`
+  if (DESCRIPTIONS[key]) return DESCRIPTIONS[key]
+  const kind = FORMATS[from].kind
+  if (FORMATS[to].kind === 'image' || kind === 'image') return KIND_FALLBACK.image
+  return KIND_FALLBACK[kind] || KIND_FALLBACK.document
+}
+
 export default function Convert() {
   const { pair } = useParams()
-  const match = /^([a-z]+)-to-([a-z]+)$/.exec(pair || '')
+  const match = /^([a-z0-9]+)-to-([a-z0-9]+)$/.exec(pair || '')
   const from = match?.[1]
   const to = match?.[2]
   const entry = from && to ? getConversion(from, to) : null
 
-  // Read the handed-off file exactly once per mount
   const initialFile = useMemo(() => takePendingFile(), [])
 
   if (!entry) return <NotFound />
 
   const title = `${FORMATS[from].label} to ${FORMATS[to].label}`
-  const description =
-    DESCRIPTIONS[`${from}-${to}`] ||
-    (FORMATS[from].kind === 'image' || FORMATS[to].kind === 'image'
-      ? 'Full decode and re-encode with quality and size options — a true pixel-level conversion.'
-      : 'A real structural conversion, processed entirely in your browser.')
+  const description = describe(from, to)
 
   return (
     <>
+      <Seo
+        title={`${title} Converter`}
+        description={description}
+        breadcrumbs={[
+          { name: 'Home', url: `${ORIGIN}/` },
+          { name: title, url: `${ORIGIN}/convert/${from}-to-${to}` },
+        ]}
+      />
       <header className="header">
         <p className="breadcrumb">
           <Link to="/">All converters</Link> / {title}
         </p>
         <h1>{title} Converter</h1>
         <p>{description}</p>
+        {FORMATS[from].kind === 'image' && to === 'pdf' && (
+          <p className="meta">
+            <Link to="/tools/images-to-pdf">Combine into one PDF instead →</Link>
+          </p>
+        )}
       </header>
       <ConverterWidget key={pair} from={from} to={to} initialFile={initialFile} />
     </>

@@ -1,12 +1,9 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { FORMATS, targetsFor, detectFormat } from '../converters/index.js'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { FORMATS, targetsFor, detectFormat, KINDS, sourcesForKind, listTools, listConversions } from '../converters/index.js'
 import { setPendingFile } from '../lib/pendingFile.js'
 import { formatBytes } from '../lib/format.js'
 import Dropzone from '../components/Dropzone.jsx'
-
-const DOC_SOURCES = ['pdf', 'docx', 'txt', 'md', 'html']
-const IMAGE_SOURCES = ['png', 'jpg', 'webp', 'gif', 'svg', 'bmp', 'heic', 'ico']
 
 function SourceCard({ from }) {
   const targets = targetsFor(from)
@@ -30,8 +27,12 @@ function SourceCard({ from }) {
 
 export default function Home() {
   const navigate = useNavigate()
-  const [detected, setDetected] = useState(null) // { file, from, targets }
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [detected, setDetected] = useState(null)
   const [error, setError] = useState('')
+  const tools = listTools()
+  const pairCount = listConversions().length
+  const formatCount = Object.keys(FORMATS).filter((k) => FORMATS[k].input).length
 
   const handleFile = async (file) => {
     setError('')
@@ -48,6 +49,30 @@ export default function Home() {
     }
   }
 
+  useEffect(() => {
+    if (searchParams.get('share-target') !== '1') return
+    ;(async () => {
+      try {
+        const cache = await caches.open('share-target')
+        const res = await cache.match('shared')
+        if (res) {
+          const buf = await res.arrayBuffer()
+          const name = res.headers.get('X-Filename') || 'shared'
+          const type = res.headers.get('Content-Type') || 'application/octet-stream'
+          await cache.delete('shared')
+          await handleFile(new File([buf], name, { type }))
+        }
+      } catch {
+        // ignore
+      } finally {
+        const next = new URLSearchParams(searchParams)
+        next.delete('share-target')
+        setSearchParams(next, { replace: true })
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const go = (to) => {
     setPendingFile(detected.file)
     navigate(`/convert/${detected.from}-to-${to}`)
@@ -58,8 +83,8 @@ export default function Home() {
       <header className="header">
         <h1>Convert any file. Right in your browser.</h1>
         <p>
-          PDF, Markdown, HTML, text, and eight image formats — real parsing and rendering, with
-          nothing uploaded to any server.
+          {formatCount} formats and {pairCount}+ conversion pairs — documents, images, data, ebooks,
+          subtitles, and media. Real parsing and rendering, with nothing uploaded to any server.
         </p>
       </header>
 
@@ -94,23 +119,39 @@ export default function Home() {
         </div>
       )}
 
-      <section className="section">
-        <h2>Documents</h2>
-        <div className="cards">
-          {DOC_SOURCES.map((from) => (
-            <SourceCard key={from} from={from} />
-          ))}
-        </div>
-      </section>
+      {KINDS.map((kind) => {
+        const sources = sourcesForKind(kind.id)
+        if (!sources.length) return null
+        return (
+          <section key={kind.id} className="section" data-kind={kind.id}>
+            <h2>{kind.label}</h2>
+            <div className="cards">
+              {sources.map((from) => (
+                <SourceCard key={from} from={from} />
+              ))}
+            </div>
+          </section>
+        )
+      })}
 
-      <section className="section">
-        <h2>Images</h2>
-        <div className="cards">
-          {IMAGE_SOURCES.map((from) => (
-            <SourceCard key={from} from={from} />
-          ))}
-        </div>
-      </section>
+      {tools.length > 0 && (
+        <section className="section" data-kind="tools">
+          <h2>Tools</h2>
+          <div className="cards">
+            {tools.map((t) => (
+              <div key={t.id} className="card">
+                <div className="card-title">{t.label}</div>
+                <p className="meta">{t.description}</p>
+                <div className="card-targets">
+                  <Link to={`/tools/${t.id}`} className="chip">
+                    Open tool
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }
