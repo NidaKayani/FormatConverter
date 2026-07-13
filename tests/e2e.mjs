@@ -336,6 +336,10 @@ second paragraph line two`
 })
 for (const r of sdkReport) log('SDK: ' + r.name, r.ok, r.detail)
 
+// The SDK's cross-origin PDF support depends on this exact filename being served
+const workerRes = await fetch(BASE + '/pdf.worker.min.mjs')
+log('SDK: pdf.worker.min.mjs served', workerRes.ok, `status ${workerRes.status}`)
+
 // -----------------------------------------------------------------------------
 // 2. UI flows
 // -----------------------------------------------------------------------------

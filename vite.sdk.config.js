@@ -28,7 +28,7 @@ export default defineConfig({
       output: {
         format: 'es',
         entryFileNames: 'sdk.js',
-        inlineDynamicImports: true,
+        codeSplitting: false,
         assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
