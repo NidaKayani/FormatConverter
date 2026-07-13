@@ -1,7 +1,7 @@
 import { fetchFile } from '@ffmpeg/util'
-import { runFFmpeg } from './engine.js'
+import { runFFmpeg, assertAvFileSize } from './engine.js'
 
-const AUDIO_OUT = {
+export const AUDIO_OUT = {
   mp3: { ext: 'mp3', mime: 'audio/mpeg', args: (inp, out) => ['-i', inp, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', out] },
   wav: { ext: 'wav', mime: 'audio/wav', args: (inp, out) => ['-i', inp, '-vn', '-c:a', 'pcm_s16le', out] },
   ogg: { ext: 'ogg', mime: 'audio/ogg', args: (inp, out) => ['-i', inp, '-vn', '-c:a', 'libvorbis', '-q:a', '4', out] },
@@ -13,6 +13,7 @@ export default async function convertAudio(file, options = {}, onProgress = () =
   const to = options.to
   const spec = AUDIO_OUT[to]
   if (!spec) throw new Error(`Unsupported audio target "${to}".`)
+  assertAvFileSize(file)
 
   const fromExt = options.from || 'bin'
   const inputName = `input.${fromExt === 'm4a' ? 'm4a' : fromExt}`
@@ -20,11 +21,11 @@ export default async function convertAudio(file, options = {}, onProgress = () =
   const inputData = await fetchFile(file)
 
   onProgress({ stage: 'encode' })
-  const blob = await runFFmpeg(spec.args(inputName, outputName), {
+  return runFFmpeg(spec.args(inputName, outputName), {
     inputName,
     inputData,
     outputName,
     outputMime: spec.mime,
+    signal: options.signal,
   }, onProgress)
-  return blob
 }

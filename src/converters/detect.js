@@ -86,6 +86,10 @@ export async function detectFormat(file) {
   if (lower.startsWith('<!doctype html') || lower.startsWith('<html')) return 'html'
   if (lower.startsWith('<?xml')) return 'xml'
   if (/^webvtt/i.test(trimmed)) return 'vtt'
+  if (/^\[script info\]/i.test(trimmed)) {
+    const ext = fromExtension(file.name)
+    return ext === 'ssa' ? 'ssa' : 'ass'
+  }
   if (
     /^\d+\s*\n\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,.]\d{3}/m.test(trimmed) ||
     /^\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,.]\d{3}/m.test(trimmed)
@@ -103,11 +107,12 @@ export async function detectFormat(file) {
     }
   }
 
-  // csv / tsv / yaml: extension only (too ambiguous by content)
   const byExt = fromExtension(file.name)
+  if (byExt === 'toml' || byExt === 'ass' || byExt === 'ssa') return byExt
+
+  // csv / tsv / yaml: extension only (too ambiguous by content)
   if (byExt === 'csv' || byExt === 'tsv' || byExt === 'yaml') return byExt
   if (byExt) return byExt
-  // Plain readable text with no better signal
   return 'txt'
 }
 

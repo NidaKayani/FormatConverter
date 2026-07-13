@@ -67,7 +67,10 @@ const text = await convert(photoOfReceipt, 'txt', { ocrLanguage: 'eng' })`
 
 const BATCH_EXAMPLE = `import { convertMany, zipResults } from '${ORIGIN}/sdk.js'
 
+const ac = new AbortController()
 const results = await convertMany(fileList, 'pdf', {
+  concurrency: 2, // default 2, max 4
+  signal: ac.signal, // optional AbortSignal
   onProgress: ({ fileIndex, fileCount, page, total }) =>
     console.log(\`file \${fileIndex + 1}/\${fileCount}\`),
 })
@@ -92,7 +95,7 @@ const GLOBAL_EXAMPLE = `<script type="module" src="${ORIGIN}/sdk.js"></script>
 </script>`
 
 const EMBED_EXAMPLE = `<iframe
-  src="${ORIGIN}/embed?from=pdf&to=md"
+  src="${ORIGIN}/embed?from=pdf&to=md&theme=light"
   width="480" height="420" style="border:0; border-radius:12px"
 ></iframe>
 
@@ -160,6 +163,8 @@ export default function Developers() {
             <tr><td><code>ocrLanguage</code></td><td>OCR conversions</td><td>Tesseract language code, default <code>'eng'</code> (bundled); others stream on first use</td></tr>
             <tr><td><code>from</code></td><td>all</td><td>Force the input format instead of auto-detecting</td></tr>
             <tr><td><code>onProgress</code></td><td>all</td><td>Callback receiving <code>{'{ page, total, stage }'}</code></td></tr>
+            <tr><td><code>signal</code></td><td>convert / convertMany / runTool</td><td><code>AbortSignal</code> to cancel in-flight work</td></tr>
+            <tr><td><code>concurrency</code></td><td>convertMany</td><td>Parallelism 1–4 (default 2)</td></tr>
           </tbody>
         </table>
       </section>
@@ -190,7 +195,8 @@ export default function Developers() {
         <CodeBlock code={EMBED_EXAMPLE} />
         <p>
           Query params: <code>from</code> and <code>to</code> select the conversion (defaults:{' '}
-          <code>pdf</code> → <code>txt</code>).
+          <code>pdf</code> → <code>txt</code>). Optional <code>theme=light|dark</code> forces the
+          embed color scheme.
         </p>
       </section>
 
@@ -282,15 +288,23 @@ const { blob, filename } = await runTool('merge-pdf', pdfFiles)`}
             from the tesseract.js data CDN.
           </li>
           <li>
-            <strong>Data formats:</strong> CSV/TSV/XLSX use a shared tabular model. JSON/YAML/XML
+            <strong>Data formats:</strong> CSV/TSV/XLSX use a shared tabular model. JSON/YAML/TOML/XML
             preserve tree types when converting among themselves; non-tabular trees refuse
             table targets with an actionable error. XML attributes use the <code>@_</code> prefix.
-            TIFF encode is uncompressed.
+            TIFF encode is uncompressed. SheetJS (XLSX) stays on the main thread; other data pairs
+            can run in the app worker.
           </li>
           <li>
             <strong>Audio &amp; video:</strong> powered by single-thread ffmpeg.wasm (~31 MB,
-            downloaded once from <code>{ORIGIN}/ffmpeg/</code>). Keep media under ~500 MB. WebM is
-            accepted as input; output matrix follows codecs present in the bundled core.
+            cached in IndexedDB after the first download from <code>{ORIGIN}/ffmpeg/</code>).
+            Keep media under ~500 MB (hard refuse above 600 MB). Video can extract to
+            mp3/wav/ogg/flac/m4a. WebM output is gated on libvpx in the bundled core — if missing,
+            use MP4.
+          </li>
+          <li>
+            <strong>SEO shells:</strong> build-time prerender writes static HTML under{' '}
+            <code>/convert/…</code> and <code>/tools/…</code> with title, description, canonical,
+            and JSON-LD. The SPA still hydrates in the browser; dynamic OG images remain client-side.
           </li>
           <li>
             <strong>Install as an app:</strong> the site is a PWA — installed, it converts fully
@@ -302,8 +316,8 @@ const { blob, filename } = await runTool('merge-pdf', pdfFiles)`}
             16+). AVIF encode and some media codecs vary by browser.
           </li>
           <li>
-            <strong>Input-only note:</strong> SVG, HEIC, WebM and MOV are supported as inputs where
-            listed; outputs depend on what browsers / codecs can produce.
+            <strong>Input-only note:</strong> SVG, HEIC, and MOV are supported as inputs where
+            listed; WebM is both input and output when the engine includes libvpx.
           </li>
         </ul>
       </section>

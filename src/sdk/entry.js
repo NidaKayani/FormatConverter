@@ -8,11 +8,15 @@ export {
   detectFormat,
   listConversions,
   targetsFor,
+  getConversion,
   FORMATS,
   KINDS,
   runTool,
   listTools,
   getTool,
+  getLastFFmpegLoadSource,
+  resetFFmpeg,
+  assertAvFileSize,
 } from '../converters/index.js'
 
 // Also expose a global for consumers loading via <script type="module" src>

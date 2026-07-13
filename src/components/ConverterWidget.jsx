@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { convert, convertMany, zipResults, FORMATS, getConversion } from '../converters/index.js'
 import { acceptFor } from '../converters/registry.js'
 import Dropzone from './Dropzone.jsx'
@@ -6,6 +6,9 @@ import ProgressBar from './ProgressBar.jsx'
 import OptionsPanel from './OptionsPanel.jsx'
 import ResultPanel from './ResultPanel.jsx'
 import { formatBytes, downloadBlob } from '../lib/format.js'
+import { pushRecent } from '../lib/recent.js'
+
+const SOFT_WARN_BYTES = 100 * 1024 * 1024
 
 function loadOptions(pair, schema) {
   const values = {}
@@ -48,6 +51,8 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
   const [result, setResult] = useState(null) // single-file result
   const [batch, setBatch] = useState(null) // convertMany() results
   const [error, setError] = useState('')
+  const [parallel, setParallel] = useState(true)
+  const abortRef = useRef(null)
 
   const hint = useMemo(
     () =>
@@ -57,34 +62,64 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
     [from, single]
   )
 
+  const largeWarn = useMemo(
+    () => files.some((f) => (f.size || 0) > SOFT_WARN_BYTES),
+    [files]
+  )
+
   const run = async (theFiles, opts) => {
     setStatus('converting')
     setProgress(null)
     setError('')
     saveOptions(pair, opts)
+    const ac = new AbortController()
+    abortRef.current = ac
     try {
       if (theFiles.length === 1) {
-        const res = await convert(theFiles[0], to, { ...opts, onProgress: setProgress })
+        const res = await convert(theFiles[0], to, {
+          ...opts,
+          onProgress: setProgress,
+          signal: ac.signal,
+        })
+        pushRecent(from, to)
         setResult(res)
         setStatus('done')
         onResult?.(res)
       } else {
-        const results = await convertMany(theFiles, to, { ...opts, onProgress: setProgress })
+        const results = await convertMany(theFiles, to, {
+          ...opts,
+          onProgress: setProgress,
+          signal: ac.signal,
+          concurrency: parallel ? 2 : 1,
+        })
+        if (results.some((r) => r.ok)) pushRecent(from, to)
         setBatch(results)
         setStatus('done')
       }
     } catch (err) {
+      if (err?.name === 'AbortError' || ac.signal.aborted) {
+        setError('Conversion cancelled.')
+        setStatus('error')
+        return
+      }
       setError(err.message || 'Conversion failed.')
       setStatus('error')
+    } finally {
+      abortRef.current = null
     }
+  }
+
+  const cancel = () => {
+    abortRef.current?.abort()
   }
 
   const handleFiles = (theFiles) => {
     setFiles(theFiles)
     setResult(null)
     setBatch(null)
-    if (schema.length > 0 || theFiles.length > 1) setStatus('ready')
-    else run(theFiles, options)
+    if (schema.length > 0 || theFiles.length > 1 || theFiles.some((f) => (f.size || 0) > SOFT_WARN_BYTES)) {
+      setStatus('ready')
+    } else run(theFiles, options)
   }
 
   useEffect(() => {
@@ -120,11 +155,34 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
   }, [status, from])
 
   const reset = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
     setFiles([])
     setResult(null)
     setBatch(null)
     setError('')
     setStatus('idle')
+  }
+
+  const moveFile = (index, dir) => {
+    setFiles((prev) => {
+      const next = [...prev]
+      const j = index + dir
+      if (j < 0 || j >= next.length) return prev
+      ;[next[index], next[j]] = [next[j], next[index]]
+      return next
+    })
+  }
+
+  const removeFile = (index) => {
+    setFiles((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      if (next.length === 0) {
+        setStatus('idle')
+        return []
+      }
+      return next
+    })
   }
 
   const downloadAll = async () => {
@@ -164,18 +222,59 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
               Choose other files
             </button>
           </div>
+          {largeWarn && (
+            <p className="meta" role="status">
+              Large file detected (over 100 MB). Conversion may be slow or run out of memory in the browser.
+            </p>
+          )}
           {files.length > 1 && (
-            <ul className="queue">
-              {files.map((f, i) => (
-                <li key={i} className="queue-row">
-                  <span className="queue-name">{f.name}</span>
-                  <span className="meta">{formatBytes(f.size)}</span>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="queue">
+                {files.map((f, i) => (
+                  <li key={`${f.name}-${i}`} className="queue-row">
+                    <span className="queue-name">{f.name}</span>
+                    <span className="meta">{formatBytes(f.size)}</span>
+                    <span className="queue-actions">
+                      <button type="button" className="btn-link" onClick={() => moveFile(i, -1)} disabled={i === 0}>
+                        Up
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-link"
+                        onClick={() => moveFile(i, 1)}
+                        disabled={i === files.length - 1}
+                      >
+                        Down
+                      </button>
+                      <button type="button" className="btn-link" onClick={() => removeFile(i)}>
+                        Remove
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <label className="meta" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={parallel}
+                  onChange={(e) => setParallel(e.target.checked)}
+                />
+                Convert up to 2 files in parallel
+              </label>
+              <div style={{ marginTop: '0.5rem' }}>
+                <Dropzone
+                  accept={acceptFor(from)}
+                  hint="Add more files"
+                  onFile={(f) => setFiles((prev) => [...prev, f])}
+                  onFiles={(more) => setFiles((prev) => [...prev, ...more])}
+                  multiple
+                  compact
+                />
+              </div>
+            </>
           )}
           <OptionsPanel schema={schema} values={options} onChange={setOptions} />
-          <div className="toolbar-actions" style={{ justifyContent: 'flex-end', display: 'flex' }}>
+          <div className="toolbar-actions" style={{ justifyContent: 'flex-end', display: 'flex', gap: '0.75rem' }}>
             <button className="btn btn-primary" onClick={() => run(files, options)}>
               Convert {files.length > 1 ? `${files.length} files ` : ''}to {FORMATS[to].label}
             </button>
@@ -186,6 +285,11 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
       {status === 'converting' && (
         <div className="result">
           <ProgressBar progress={progress} />
+          <div className="toolbar-actions" style={{ justifyContent: 'flex-end', display: 'flex' }}>
+            <button type="button" className="btn" onClick={cancel}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 

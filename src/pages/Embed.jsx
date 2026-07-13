@@ -1,17 +1,24 @@
+import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FORMATS, getConversion } from '../converters/index.js'
 import ConverterWidget from '../components/ConverterWidget.jsx'
+import { applyTheme } from '../lib/theme.js'
 
 /**
  * Chrome-less converter for embedding in an <iframe>. Configure with query
- * params: /embed?from=pdf&to=txt. On completion the result is posted to the
- * parent window as { type: 'formatconvert:result', filename, blob }.
+ * params: /embed?from=pdf&to=txt&theme=light|dark. On completion the result is
+ * posted to the parent window as { type: 'formatconvert:result', filename, blob }.
  */
 export default function Embed() {
   const [params] = useSearchParams()
   const from = params.get('from') || 'pdf'
   const to = params.get('to') || 'txt'
+  const theme = params.get('theme')
   const entry = getConversion(from, to)
+
+  useEffect(() => {
+    if (theme === 'light' || theme === 'dark') applyTheme(theme)
+  }, [theme])
 
   if (!entry) {
     return (

@@ -18,7 +18,8 @@ export default async function pdfToImages(file, options, onProgress) {
 
   const JSZip = (await import('jszip')).default
   const zip = new JSZip()
-  const ext = options.to === 'jpg' ? 'jpg' : 'png'
+  const extMap = { jpg: 'jpg', png: 'png', webp: 'webp', avif: 'avif' }
+  const ext = extMap[options.to] || options.to || 'png'
   const pad = String(blobs.length).length
   blobs.forEach((blob, i) => {
     zip.file(`page-${String(i + 1).padStart(pad, '0')}.${ext}`, blob)

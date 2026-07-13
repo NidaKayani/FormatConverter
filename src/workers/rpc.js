@@ -38,11 +38,40 @@ function ensureWorker() {
  * @param {(p: object) => void} [onProgress]
  * @returns {Promise<{ buffer: ArrayBuffer, type: string, ext: string }>}
  */
-export function convertInWorker(payload, onProgress) {
+export function convertInWorker(payload, onProgress, signal) {
+  if (signal?.aborted) {
+    return Promise.reject(new DOMException('Conversion aborted.', 'AbortError'))
+  }
   const w = ensureWorker()
   const id = nextId++
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject, onProgress })
+    const onAbort = () => {
+      pending.delete(id)
+      try {
+        w.postMessage({ id, method: 'abort' })
+      } catch {
+        /* ignore */
+      }
+      reject(new DOMException('Conversion aborted.', 'AbortError'))
+    }
+    if (signal) {
+      if (signal.aborted) {
+        onAbort()
+        return
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+    pending.set(id, {
+      resolve: (v) => {
+        signal?.removeEventListener('abort', onAbort)
+        resolve(v)
+      },
+      reject: (e) => {
+        signal?.removeEventListener('abort', onAbort)
+        reject(e)
+      },
+      onProgress,
+    })
     w.postMessage({ id, method: 'convert', payload }, [payload.buffer])
   })
 }

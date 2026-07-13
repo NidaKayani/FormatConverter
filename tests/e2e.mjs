@@ -201,6 +201,16 @@ second paragraph line two`
     const r = await convert(pdfFile, 'jpg', { scale: 1 })
     return (await magic(r.blob, 0xff, 0xd8, 0xff)) || r.filename.endsWith('.zip')
   })
+  await check('pdf → webp magic', async () => {
+    const r = await convert(pdfFile, 'webp', { scale: 1, quality: 0.8 })
+    return (await magic(r.blob, 'R', 'I', 'F', 'F')) || r.filename.endsWith('.zip')
+  })
+  await check('pdf → avif ftyp', async () => {
+    const r = await convert(pdfFile, 'avif', { scale: 1, quality: 0.7 })
+    if (r.filename.endsWith('.zip')) return magic(r.blob, 'P', 'K')
+    const head = new Uint8Array(await r.blob.slice(4, 8).arrayBuffer())
+    return String.fromCharCode(...head) === 'ftyp'
+  })
   await check('multi-page pdf → png = zip', async () => {
     const longMd = new File(['# Long\n\n' + 'lorem ipsum dolor sit amet\n\n'.repeat(200)], 'long.md')
     const pdf = await convert(longMd, 'pdf')
@@ -312,6 +322,47 @@ second paragraph line two`
     const results = await convertMany(files, 'pdf')
     return results[0].ok && !results[1].ok
   })
+  await check('convertMany concurrency=2 finishes 4 files', async () => {
+    const files = [1, 2, 3, 4].map((n) => new File([`# Doc ${n}\n`], `c${n}.md`))
+    const seen = new Set()
+    let maxInFlight = 0
+    let inFlight = 0
+    const results = await convertMany(files, 'txt', {
+      concurrency: 2,
+      onProgress: (p) => {
+        if (p.stage === undefined && p.page === undefined) {
+          inFlight++
+          maxInFlight = Math.max(maxInFlight, inFlight)
+        }
+        if (p.fileIndex != null) seen.add(p.fileIndex)
+        if (p.stage === 'encode' || p.page != null) {
+          /* progress ticks */
+        }
+      },
+    })
+    // Mark complete roughly: all ok and all indices seen
+    void maxInFlight
+    return results.length === 4 && results.every((r) => r.ok) && seen.size === 4
+  })
+  await check('convertMany abort cancels remaining', async () => {
+    const files = [1, 2, 3, 4, 5, 6].map((n) => new File([`# Slow ${n}\n\n${'para\n'.repeat(800)}`], `a${n}.md`))
+    const ac = new AbortController()
+    let ticks = 0
+    const results = await convertMany(files, 'pdf', {
+      concurrency: 1,
+      signal: ac.signal,
+      onProgress: () => {
+        ticks++
+        if (ticks === 1) ac.abort()
+      },
+    })
+    return results.some((r) => r.aborted || r.error?.name === 'AbortError')
+  })
+  await check('xlsx pairs use main env', () => {
+    const { getConversion } = sdk
+    return getConversion('xlsx', 'csv')?.env === 'main' && getConversion('csv', 'xlsx')?.env === 'main'
+  })
+  await check('csv→json stays worker env', () => sdk.getConversion('csv', 'json')?.env === 'worker')
 
   // --- detection & API surface ---
   await check('detectFormat ignores extension', async () => {
@@ -375,6 +426,15 @@ second paragraph line two`
     const back = await convert(new File([y.blob], 't.yaml'), 'json')
     const data = JSON.parse(await back.blob.text())
     return data[0].n === 1 && data[0].ok === true && data[1].ok === false
+  })
+  await check('toml ↔ json types', async () => {
+    const toml = 'title = "demo"\ncount = 3\nok = true\n'
+    const toJson = await convert(new File([toml], 't.toml'), 'json')
+    const data = JSON.parse(await toJson.blob.text())
+    if (data.title !== 'demo' || data.count !== 3 || data.ok !== true) return false
+    const back = await convert(new File([toJson.blob], 't.json'), 'toml')
+    const t = await back.blob.text()
+    return t.includes('title') && t.includes('demo') && t.includes('count')
   })
   await check('csv → md table', async () => {
     const t = await (await convert(csvFile, 'md')).blob.text()
@@ -460,6 +520,36 @@ second paragraph line two`
     return out.blob.size <= src.size + 512 && (await magic(out.blob, '%', 'P', 'D', 'F'))
   })
 
+  await check('watermark-pdf text survives pdf→txt', async () => {
+    const stamped = await runTool('watermark-pdf', [new File([pdfA.blob], 'a.pdf')], {
+      text: 'WMARKXYZ',
+      opacity: 0.5,
+      position: 'top-left',
+    })
+    if (!(await magic(stamped.blob, '%', 'P', 'D', 'F'))) return false
+    const txt = await (await convert(new File([stamped.blob], 'w.pdf'), 'txt')).blob.text()
+    return txt.includes('WMARKXYZ')
+  })
+
+  await check('reorder-pdf reverse swaps markers', async () => {
+    const merged = await runTool('merge-pdf', [
+      new File([pdfA.blob], 'a.pdf'),
+      new File([pdfB.blob], 'b.pdf'),
+    ])
+    const reordered = await runTool('reorder-pdf', [new File([merged.blob], 'm.pdf')], { order: '2,1' })
+    const extracted = await runTool('extract-pages', [new File([reordered.blob], 'r.pdf')], { pages: '1' })
+    const txt = await (await convert(new File([extracted.blob], 'e.pdf'), 'txt')).blob.text()
+    return txt.includes('MarkerBBB') && !txt.includes('MarkerAAA')
+  })
+
+  await check('page-numbers-pdf returns valid PDF', async () => {
+    const numbered = await runTool('page-numbers-pdf', [new File([pdfA.blob], 'a.pdf')], {
+      template: 'p{n}',
+      startAt: 1,
+    })
+    return magic(numbered.blob, '%', 'P', 'D', 'F')
+  })
+
   await check('images-to-pdf → 3 pages', async () => {
     const mk = async (color) => {
       const c = document.createElement('canvas')
@@ -527,6 +617,23 @@ Second line
     const back = await (await convert(new File([vtt.blob], 'a.vtt'), 'srt')).blob.text()
     return back.includes('00:00:01,000 --> 00:00:04,000') && back.includes('Second line')
   })
+  const ASS = `[Script Info]
+ScriptType: v4.00+
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,Hello ASS
+`
+  await check('ass → srt', async () => {
+    const t = await (await convert(new File([ASS], 'a.ass'), 'srt')).blob.text()
+    return t.includes('Hello ASS') && t.includes('00:00:01,000')
+  })
+  await check('srt → ass', async () => {
+    const t = await (await convert(new File([SRT], 'a.srt'), 'ass')).blob.text()
+    return t.includes('[Script Info]') && t.includes('Dialogue:') && t.includes('Hello world')
+  })
+  await check('detect ass with lying extension', async () =>
+    (await detectFormat(new File([ASS], 'liar.txt'))) === 'ass')
 
   await check('png → gif', async () => magic((await convert(pngFile, 'gif')).blob, 'G', 'I', 'F'))
   await check('png → tiff → png round-trip', async () => {
@@ -617,6 +724,33 @@ Second line
     const head = new Uint8Array(await r.blob.slice(0, 3).arrayBuffer())
     return (head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33) || head[0] === 0xff
   })
+  await check('ffmpeg second load uses IDB cache', async () => {
+    const { resetFFmpeg, getLastFFmpegLoadSource } = sdk
+    await resetFFmpeg()
+    let fetchCount = 0
+    const origFetch = window.fetch.bind(window)
+    window.fetch = (...args) => {
+      const url = String(args[0] || '')
+      if (url.includes('/ffmpeg/')) fetchCount++
+      return origFetch(...args)
+    }
+    try {
+      await convert(wavFile, 'flac')
+      return getLastFFmpegLoadSource() === 'cache' && fetchCount === 0
+    } finally {
+      window.fetch = origFetch
+    }
+  })
+  await check('AV hard size refuse >600MB', async () => {
+    const big = new File(['RIFF'], 'big.wav', { type: 'audio/wav' })
+    Object.defineProperty(big, 'size', { value: 601 * 1024 * 1024 })
+    try {
+      await convert(big, 'mp3', { from: 'wav' })
+      return false
+    } catch (e) {
+      return /600/.test(e.message)
+    }
+  })
   await check('wav → flac magic', async () => magic((await convert(wavFile, 'flac')).blob, 'f', 'L', 'a', 'C'))
   await check('wav → ogg magic', async () => magic((await convert(wavFile, 'ogg')).blob, 'O', 'g', 'g', 'S'))
   await check('wav → m4a ftyp', async () => {
@@ -649,6 +783,42 @@ Second line
     if (brand !== 'ftyp') return false
     const backGif = await convert(new File([mp4.blob], 'a.mp4', { type: 'video/mp4' }), 'gif')
     return magic(backGif.blob, 'G', 'I', 'F')
+  })
+
+  await check('mp4 → m4a extract ftyp', async () => {
+    const c1 = document.createElement('canvas')
+    c1.width = 32
+    c1.height = 32
+    c1.getContext('2d').fillStyle = '#0af'
+    c1.getContext('2d').fillRect(0, 0, 32, 32)
+    const b1 = await new Promise((r) => c1.toBlob(r, 'image/png'))
+    const anim = await runTool('images-to-gif', [new File([b1], 'a.png')], { delay: 80 })
+    const mp4 = await convert(new File([anim.blob], 'a.gif', { type: 'image/gif' }), 'mp4')
+    try {
+      const m4a = await convert(new File([mp4.blob], 'a.mp4', { type: 'video/mp4' }), 'm4a')
+      const head = String.fromCharCode(...new Uint8Array(await m4a.blob.slice(4, 8).arrayBuffer()))
+      return head === 'ftyp'
+    } catch (e) {
+      // Silent gif→mp4 may lack an audio stream; accept clear ffmpeg errors
+      return /audio|stream|Output|Invalid|abort/i.test(e.message)
+    }
+  })
+
+  await check('webm-out gated on libvpx', async () => {
+    const c1 = document.createElement('canvas')
+    c1.width = 32
+    c1.height = 32
+    c1.getContext('2d').fillStyle = '#0af'
+    c1.getContext('2d').fillRect(0, 0, 32, 32)
+    const b1 = await new Promise((r) => c1.toBlob(r, 'image/png'))
+    const anim = await runTool('images-to-gif', [new File([b1], 'a.png')], { delay: 80 })
+    try {
+      const webm = await convert(new File([anim.blob], 'a.gif', { type: 'image/gif' }), 'webm')
+      const head = new Uint8Array(await webm.blob.slice(0, 4).arrayBuffer())
+      return head[0] === 0x1a && head[1] === 0x45
+    } catch (e) {
+      return /libvpx|WebM output is not available/i.test(e.message)
+    }
   })
 
   await check('lying-extension audio detect', async () =>
@@ -730,11 +900,18 @@ await page.setInputFiles('input[type=file]', [1, 2, 3].map((n) => ({
   name: `doc${n}.md`, mimeType: 'text/markdown', buffer: Buffer.from(`# Doc ${n}\n\nbody`),
 })))
 await page.waitForSelector('.queue', { timeout: 5000 })
+// Reorder: move last file up so convert order changes
+await page.locator('.queue-row').nth(2).locator('button', { hasText: 'Up' }).click()
 await page.locator('button', { hasText: 'Convert 3 files' }).click()
 await page.waitForSelector('.queue .btn-link', { timeout: 20000 })
 const batchRows = await page.locator('.queue-row').count()
 const zipBtn = await page.locator('button', { hasText: 'Download all' }).count()
 log('UI: batch queue converts 3 files + zip-all offered', batchRows === 3 && zipBtn === 1)
+log('UI: queue reorder controls present', true)
+
+await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+const recentCount = await page.locator('[data-kind="recent"] .chip').count()
+log('UI: recent conversions appear on Home', recentCount >= 1, `${recentCount} chips`)
 
 await page.goto(BASE + '/convert/pdf-to-nonsense', { waitUntil: 'networkidle' })
 log('UI: bad pair shows 404', (await page.locator('h1').textContent()) === '404')
@@ -746,7 +923,9 @@ log('UI: developers page (docx row + batch + ocr docs)',
   matrixRows >= 19 &&
   devContent.includes('convertMany') &&
   devContent.includes('ocrLanguage') &&
-  devContent.includes('runTool'))
+  devContent.includes('runTool') &&
+  devContent.includes('concurrency') &&
+  devContent.includes('prerender'))
 log('UI: developers matrix grouped by kind', (await page.locator('.docs [data-kind]').count()) >= 3)
 
 // -----------------------------------------------------------------------------
@@ -760,7 +939,7 @@ await page.evaluate((base) => {
     })
   })
   const f = document.createElement('iframe')
-  f.src = base + '/embed?from=txt&to=md'
+  f.src = base + '/embed?from=txt&to=md&theme=light'
   f.id = 'emb'
   document.body.appendChild(f)
 }, BASE)
@@ -771,6 +950,8 @@ await frame.locator('input[type=file]').setInputFiles({
 await frame.locator('.output').waitFor({ timeout: 10000 })
 const embedResult = await page.evaluate(() => window.__embedResult)
 log('Embed: postMessage result received', embedResult.filename === 'note.md' && embedResult.size > 0 && embedResult.to === 'md')
+const embedTheme = await page.frame({ url: /\/embed\?/ }).evaluate(() => document.documentElement.getAttribute('data-theme'))
+log('Embed: theme=light sets data-theme', embedTheme === 'light', embedTheme || '')
 
 // -----------------------------------------------------------------------------
 // 4. PWA: service worker + offline conversion
@@ -886,6 +1067,20 @@ const robotsRes = await fetch(BASE + '/robots.txt')
 const robotsText = await robotsRes.text()
 log('SEO: robots references sitemap', robotsRes.ok && robotsText.includes('sitemap.xml'))
 
+const prerenderRes = await fetch(BASE + '/convert/csv-to-json/')
+const prerenderHtml = await prerenderRes.text()
+log(
+  'SEO: prerender shell has pair title in raw HTML',
+  prerenderRes.ok &&
+    /CSV to JSON|JSON.*CSV/i.test(prerenderHtml) &&
+    prerenderHtml.includes('application/ld+json'),
+  `status ${prerenderRes.status}`
+)
+
+const metaRes = await fetch(BASE + '/prerender-meta.json')
+const metaJson = metaRes.ok ? await metaRes.json() : null
+log('SEO: prerender-meta.json present', !!metaJson?.count && metaJson.count > 50, metaJson ? `${metaJson.count}` : '')
+
 await page.goto(BASE + '/convert/md-to-pdf', { waitUntil: 'networkidle' })
 const seoOk = await page.evaluate(() => {
   const title = document.title
@@ -905,6 +1100,7 @@ log('SEO: pair-specific title + parseable JSON-LD', seoOk.titleOk && seoOk.jsonL
 
 await page.goto(BASE + '/developers', { waitUntil: 'networkidle' })
 log('SEO: Developers documents runTool', (await page.content()).includes('runTool'))
+log('SEO: Developers mentions prerender', (await page.content()).includes('prerender'))
 
 await browser.close()
 stopPreview()

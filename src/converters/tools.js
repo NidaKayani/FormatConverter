@@ -149,3 +149,80 @@ registerTool('images-to-gif', {
   ],
   load: () => import('./images/gifEncode.js'),
 })
+
+registerTool('watermark-pdf', {
+  label: 'Watermark PDF',
+  description: 'Stamp text across every page with adjustable opacity and position.',
+  inputs: { formats: ['pdf'], min: 1, max: 1, ordered: false },
+  output: 'pdf',
+  options: [
+    { key: 'text', label: 'Watermark text', type: 'text', default: 'CONFIDENTIAL', help: 'Text drawn on each page.' },
+    {
+      key: 'opacity',
+      label: 'Opacity',
+      type: 'range',
+      default: 0.25,
+      min: 0.05,
+      max: 1,
+      step: 0.05,
+      help: 'How strong the watermark appears.',
+    },
+    {
+      key: 'position',
+      label: 'Position',
+      type: 'select',
+      default: 'center',
+      choices: [
+        { value: 'center', label: 'Center (diagonal)' },
+        { value: 'top-left', label: 'Top left' },
+        { value: 'top-right', label: 'Top right' },
+        { value: 'bottom-left', label: 'Bottom left' },
+        { value: 'bottom-right', label: 'Bottom right' },
+      ],
+    },
+  ],
+  load: () => import('./pdf/watermarkPdf.js'),
+})
+
+registerTool('reorder-pdf', {
+  label: 'Reorder PDF pages',
+  description: 'Permute pages (e.g. 3,1,2) or reverse the whole document.',
+  inputs: { formats: ['pdf'], min: 1, max: 1, ordered: false },
+  output: 'pdf',
+  options: [
+    {
+      key: 'order',
+      label: 'New order',
+      type: 'text',
+      default: 'reverse',
+      placeholder: 'reverse or 3,1,2',
+      help: 'Use “reverse”, or a comma-separated list of 1-based page numbers.',
+    },
+  ],
+  load: () => import('./pdf/reorderPdf.js'),
+})
+
+registerTool('page-numbers-pdf', {
+  label: 'Page numbers',
+  description: 'Stamp page numbers in the footer of every page.',
+  inputs: { formats: ['pdf'], min: 1, max: 1, ordered: false },
+  output: 'pdf',
+  options: [
+    {
+      key: 'template',
+      label: 'Template',
+      type: 'text',
+      default: '{n}',
+      help: 'Use {n} for the page number and {total} for the page count.',
+    },
+    {
+      key: 'startAt',
+      label: 'Start at',
+      type: 'number',
+      default: 1,
+      min: 1,
+      help: 'Number for the first page.',
+    },
+  ],
+  load: () => import('./pdf/pageNumbersPdf.js'),
+})

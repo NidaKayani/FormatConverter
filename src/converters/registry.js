@@ -38,17 +38,20 @@ export const FORMATS = {
   xlsx: { label: 'Excel',    kind: 'data', exts: ['xlsx'], mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', input: true, output: true },
   json: { label: 'JSON',     kind: 'data', exts: ['json'], mime: 'application/json', input: true, output: true },
   yaml: { label: 'YAML',     kind: 'data', exts: ['yaml', 'yml'], mime: 'application/yaml', input: true, output: true },
+  toml: { label: 'TOML',     kind: 'data', exts: ['toml'], mime: 'application/toml', input: true, output: true },
   xml:  { label: 'XML',      kind: 'data', exts: ['xml'], mime: 'application/xml', input: true, output: true },
   epub: { label: 'EPUB',     kind: 'ebook', exts: ['epub'], mime: 'application/epub+zip', input: true, output: true },
   srt:  { label: 'SRT',      kind: 'subtitle', exts: ['srt'], mime: 'application/x-subrip', input: true, output: true },
   vtt:  { label: 'VTT',      kind: 'subtitle', exts: ['vtt'], mime: 'text/vtt', input: true, output: true },
+  ass:  { label: 'ASS',      kind: 'subtitle', exts: ['ass'], mime: 'text/x-ass', input: true, output: true },
+  ssa:  { label: 'SSA',      kind: 'subtitle', exts: ['ssa'], mime: 'text/x-ssa', input: true, output: true },
   mp3:  { label: 'MP3',      kind: 'audio', exts: ['mp3'], mime: 'audio/mpeg', input: true, output: true },
   wav:  { label: 'WAV',      kind: 'audio', exts: ['wav'], mime: 'audio/wav', input: true, output: true },
   ogg:  { label: 'OGG',      kind: 'audio', exts: ['ogg', 'oga'], mime: 'audio/ogg', input: true, output: true },
   flac: { label: 'FLAC',     kind: 'audio', exts: ['flac'], mime: 'audio/flac', input: true, output: true },
   m4a:  { label: 'M4A',      kind: 'audio', exts: ['m4a'], mime: 'audio/mp4', input: true, output: true },
   mp4:  { label: 'MP4',      kind: 'video', exts: ['mp4'], mime: 'video/mp4', input: true, output: true },
-  webm: { label: 'WebM',     kind: 'video', exts: ['webm'], mime: 'video/webm', input: true, output: false },
+  webm: { label: 'WebM',     kind: 'video', exts: ['webm'], mime: 'video/webm', input: true, output: true },
   mov:  { label: 'MOV',      kind: 'video', exts: ['mov'], mime: 'video/quicktime', input: true, output: false },
 }
 
@@ -178,6 +181,8 @@ for (const from of ['png', 'jpg', 'webp', 'bmp', 'gif', 'heic', 'tiff', 'avif'])
 // PDF pages → raster images (zip when multi-page)
 register('pdf', 'png', () => import('./images/pdfToImages.js'), [OPT_SCALE])
 register('pdf', 'jpg', () => import('./images/pdfToImages.js'), [OPT_SCALE, OPT_QUALITY])
+register('pdf', 'webp', () => import('./images/pdfToImages.js'), [OPT_SCALE, OPT_QUALITY])
+register('pdf', 'avif', () => import('./images/pdfToImages.js'), [OPT_SCALE, OPT_QUALITY])
 
 // Images — decode to canvas, transform, re-encode.
 const IMAGE_INPUTS = ['png', 'jpg', 'webp', 'bmp', 'gif', 'svg', 'heic', 'ico', 'tiff', 'avif']
@@ -190,20 +195,22 @@ for (const from of IMAGE_INPUTS) {
   register(from, 'pdf', () => import('./images/imageToPdf.js'), [OPT_PAGE_SIZE])
 }
 
-// Data formats — tabular IR + tree bridging (worker-safe except →pdf/docx)
-const DATA = ['csv', 'tsv', 'xlsx', 'json', 'yaml', 'xml']
+// Data formats — tabular IR + tree bridging.
+// xlsx stays on main (SheetJS is heavy); other data pairs use the worker.
+const DATA = ['csv', 'tsv', 'xlsx', 'json', 'yaml', 'toml', 'xml']
 const DATA_DOC_OUT = ['md', 'html', 'txt', 'pdf', 'docx']
 const loadData = () => import('./data/convert.js')
 for (const from of DATA) {
   for (const to of DATA) {
     if (from === to) continue
     const opts = from === 'xlsx' ? [OPT_SHEET] : []
-    register(from, to, loadData, opts, { env: 'worker' })
+    const env = from === 'xlsx' || to === 'xlsx' ? 'main' : 'worker'
+    register(from, to, loadData, opts, { env })
   }
   for (const to of DATA_DOC_OUT) {
     const opts = from === 'xlsx' ? [OPT_SHEET] : []
     if (to === 'pdf') opts.push(OPT_PAGE_SIZE)
-    const env = to === 'pdf' || to === 'docx' ? 'main' : 'worker'
+    const env = from === 'xlsx' || to === 'pdf' || to === 'docx' ? 'main' : 'worker'
     register(from, to, loadData, opts, { env })
   }
 }
@@ -220,12 +227,16 @@ register('html', 'epub', () => import('./ebook/epubOut.js'), [], { env: 'worker'
 register('docx', 'epub', () => import('./ebook/epubOut.js'))
 
 // Subtitles
-register('srt', 'vtt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
-register('srt', 'txt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
-register('vtt', 'srt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
-register('vtt', 'txt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
-register('txt', 'srt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
-register('txt', 'vtt', () => import('./subtitles/convert.js'), [], { env: 'worker' })
+const SUBS = ['srt', 'vtt', 'ass', 'ssa', 'txt']
+const loadSubs = () => import('./subtitles/convert.js')
+for (const from of SUBS) {
+  for (const to of SUBS) {
+    if (from === to) continue
+    // plain txt ↔ txt is not a conversion
+    if (from === 'txt' && to === 'txt') continue
+    register(from, to, loadSubs, [], { env: 'worker' })
+  }
+}
 
 // Audio (ffmpeg.wasm — main thread; ffmpeg owns its worker)
 const AUDIO = ['mp3', 'wav', 'ogg', 'flac', 'm4a']
@@ -236,14 +247,19 @@ for (const from of AUDIO) {
   }
 }
 
-// Video — inputs mp4/webm/mov/gif → mp4 / gif / audio extract
-for (const from of ['mp4', 'webm', 'mov']) {
+// Video — inputs mp4/webm/mov/gif → mp4 / webm / gif / audio extract
+const VIDEO_IN = ['mp4', 'webm', 'mov']
+const VIDEO_AUDIO_OUT = ['mp3', 'wav', 'ogg', 'flac', 'm4a']
+for (const from of VIDEO_IN) {
   register(from, 'mp4', () => import('./av/video.js'))
+  register(from, 'webm', () => import('./av/video.js'))
   register(from, 'gif', () => import('./av/videoToGif.js'))
-  register(from, 'mp3', () => import('./av/video.js'))
-  register(from, 'wav', () => import('./av/video.js'))
+  for (const to of VIDEO_AUDIO_OUT) {
+    register(from, to, () => import('./av/video.js'))
+  }
 }
 register('gif', 'mp4', () => import('./av/video.js'))
+register('gif', 'webm', () => import('./av/video.js'))
 
 export function getConversion(from, to) {
   return CONVERSIONS[from]?.[to] || null

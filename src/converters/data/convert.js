@@ -5,6 +5,7 @@ import { fileToTable, tableToCsvBlob } from './csv.js'
 import { parseXlsx, tableToXlsxBlob, tablesToXlsxBlob } from './xlsx.js'
 import { parseJson, jsonToTable, tableToJsonBlob, valueToJsonBlob, cloneValue } from './json.js'
 import { parseYamlFile, yamlToTable, tableToYamlBlob, valueToYamlBlob } from './yaml.js'
+import { parseTomlFile, tomlToTable, tableToTomlBlob, valueToTomlBlob } from './toml.js'
 import { parseXml, xmlToTable, tableToXmlBlob, valueToXmlBlob } from './xml.js'
 import { tableToMdBlob, tableToHtmlBlob, tableToMarkdown } from './renderTable.js'
 import { tableToObjects } from './tableModel.js'
@@ -20,6 +21,7 @@ async function toTable(file, from, options) {
   }
   if (from === 'json') return jsonToTable(await parseJson(file))
   if (from === 'yaml') return yamlToTable(await parseYamlFile(file))
+  if (from === 'toml') return tomlToTable(await parseTomlFile(file))
   if (from === 'xml') return xmlToTable(await parseXml(file))
   throw new Error(`Unsupported data source "${from}".`)
 }
@@ -27,6 +29,7 @@ async function toTable(file, from, options) {
 async function fromTree(file, from) {
   if (from === 'json') return parseJson(file)
   if (from === 'yaml') return parseYamlFile(file)
+  if (from === 'toml') return parseTomlFile(file)
   if (from === 'xml') return parseXml(file)
   if (from === 'csv' || from === 'tsv') {
     return tableToObjects(await fileToTable(file, DELIM[from]))
@@ -52,13 +55,14 @@ export default async function convertData(file, options = {}, onProgress = () =>
 
   const title = file.name?.replace(/\.[^.]+$/, '') || 'data'
 
-  // Tree ↔ tree (preserve types for json/yaml/xml)
-  const treeFormats = new Set(['json', 'yaml', 'xml'])
+  // Tree ↔ tree (preserve types for json/yaml/toml/xml)
+  const treeFormats = new Set(['json', 'yaml', 'toml', 'xml'])
   if (treeFormats.has(from) && treeFormats.has(to) && from !== to) {
     const value = cloneValue(await fromTree(file, from))
     onProgress({ stage: 'encode' })
     if (to === 'json') return valueToJsonBlob(value)
     if (to === 'yaml') return valueToYamlBlob(value)
+    if (to === 'toml') return valueToTomlBlob(value)
     if (to === 'xml') return valueToXmlBlob(value)
   }
 
@@ -98,6 +102,7 @@ export default async function convertData(file, options = {}, onProgress = () =>
   if (to === 'xlsx') return tableToXlsxBlob(table)
   if (to === 'json') return tableToJsonBlob(table)
   if (to === 'yaml') return tableToYamlBlob(table)
+  if (to === 'toml') return tableToTomlBlob(table)
   if (to === 'xml') return tableToXmlBlob(table)
   if (to === 'md') return tableToMdBlob(table, title)
   if (to === 'html') return tableToHtmlBlob(table, title)

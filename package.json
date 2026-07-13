@@ -1,7 +1,7 @@
 {
   "name": "formatconvert",
   "private": true,
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "engines": {
     "node": ">=22.13"
@@ -10,9 +10,9 @@
     "predev": "node scripts/copy-assets.mjs && node scripts/generate-sitemap.mjs",
     "dev": "vite",
     "prebuild": "node scripts/copy-assets.mjs && node scripts/generate-sitemap.mjs",
-    "build": "vite build && vite build --config vite.sdk.config.js",
+    "build": "vite build && vite build --config vite.sdk.config.js && node scripts/generate-seo.mjs",
     "e2e": "node tests/e2e.mjs",
-    "build:app": "vite build",
+    "build:app": "vite build && node scripts/generate-seo.mjs",
     "build:sdk": "vite build --config vite.sdk.config.js",
     "preview": "vite preview"
   },
@@ -35,6 +35,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-router-dom": "^7.18.1",
+    "smol-toml": "^1.7.0",
     "tesseract.js": "^7.0.0",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2",

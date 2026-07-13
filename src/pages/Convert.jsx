@@ -16,16 +16,22 @@ const DESCRIPTIONS = {
   'html-pdf': 'Renders your HTML content into a typeset, paginated PDF.',
   'txt-pdf': 'Preserves your exact line and paragraph structure with clean typesetting.',
   'pdf-png': 'Renders each PDF page to a high-resolution image. Multi-page PDFs download as a zip.',
-  'pdf-jpg': 'Renders each PDF page to a high-resolution image. Multi-page PDFs download as a zip.',
+  'pdf-jpg': 'Renders each PDF page to a high-resolution JPEG. Multi-page PDFs download as a zip.',
+  'pdf-webp': 'Renders each PDF page to WebP. Multi-page PDFs download as a zip.',
+  'pdf-avif': 'Renders each PDF page to AVIF. Multi-page PDFs download as a zip.',
+  'toml-json': 'Parses TOML into structured data and serializes JSON — types preserved in your browser.',
+  'json-toml': 'Converts JSON objects into TOML — entirely client-side.',
+  'ass-srt': 'Converts ASS/SSA dialogue cues into standard SRT subtitles with accurate timestamps.',
+  'srt-ass': 'Builds an ASS subtitle script from SRT cues for players that prefer Advanced SubStation.',
 }
 
 const KIND_FALLBACK = {
   image: 'Full decode and re-encode with quality and size options — a true pixel-level conversion.',
-  data: 'Parses your data into a tabular model (or preserves tree shape for JSON/YAML/XML) and re-serializes — entirely in your browser.',
+  data: 'Parses your data into a tabular model (or preserves tree shape for JSON/YAML/TOML/XML) and re-serializes — entirely in your browser.',
   ebook: 'Reads or builds EPUB 3 packages with real chapter structure — nothing uploaded.',
-  subtitle: 'Converts subtitle cues with accurate timestamps — SRT, VTT, and plain text.',
+  subtitle: 'Converts subtitle cues with accurate timestamps — SRT, VTT, ASS/SSA, and plain text.',
   audio: 'Transcodes audio with ffmpeg.wasm running locally in your browser (~31 MB engine, cached after first use).',
-  video: 'Transcodes or extracts from video with ffmpeg.wasm — keep files under ~500 MB for best results.',
+  video: 'Transcodes or extracts from video with ffmpeg.wasm — WebM output when libvpx is available; keep files under ~500 MB.',
   document: 'A real structural conversion, processed entirely in your browser.',
 }
 

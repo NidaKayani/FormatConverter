@@ -41,6 +41,16 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/pdf-to-webp</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/pdf-to-avif</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/txt-to-pdf</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -72,6 +82,16 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/txt-to-vtt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/txt-to-ass</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/txt-to-ssa</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -381,6 +401,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/gif-to-webm</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/heic-to-txt</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -626,6 +651,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/csv-to-toml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/csv-to-xml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -672,6 +702,11 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/tsv-to-yaml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/tsv-to-toml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -726,6 +761,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/xlsx-to-toml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/xlsx-to-xml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -772,6 +812,11 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/json-to-yaml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/json-to-toml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -826,6 +871,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/yaml-to-toml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/yaml-to-xml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -856,6 +906,61 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-csv</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-tsv</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-xlsx</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-json</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-yaml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-xml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-md</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-html</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-txt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-pdf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/toml-to-docx</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/xml-to-csv</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -877,6 +982,11 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/xml-to-yaml</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/xml-to-toml</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -936,6 +1046,16 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/srt-to-ass</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/srt-to-ssa</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/srt-to-txt</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -946,7 +1066,57 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/vtt-to-ass</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/vtt-to-ssa</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/vtt-to-txt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ass-to-srt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ass-to-vtt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ass-to-ssa</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ass-to-txt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ssa-to-srt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ssa-to-vtt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ssa-to-ass</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/ssa-to-txt</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1056,6 +1226,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mp4-to-webm</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/mp4-to-gif</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -1071,7 +1246,27 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mp4-to-ogg</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mp4-to-flac</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mp4-to-m4a</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/webm-to-mp4</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/webm-to-webm</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1091,7 +1286,27 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/webm-to-ogg</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/webm-to-flac</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/webm-to-m4a</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-mp4</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-webm</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1107,6 +1322,21 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-wav</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-ogg</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-flac</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/convert/mov-to-m4a</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1142,6 +1372,21 @@
   </url>
   <url>
     <loc>https://formatconvert.quantumlogicslimited.com/tools/images-to-gif</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/tools/watermark-pdf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/tools/reorder-pdf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://formatconvert.quantumlogicslimited.com/tools/page-numbers-pdf</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>

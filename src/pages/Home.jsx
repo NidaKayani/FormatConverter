@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FORMATS, targetsFor, detectFormat, KINDS, sourcesForKind, listTools, listConversions } from '../converters/index.js'
 import { setPendingFile } from '../lib/pendingFile.js'
 import { formatBytes } from '../lib/format.js'
+import { loadRecent } from '../lib/recent.js'
 import Dropzone from '../components/Dropzone.jsx'
 
 function SourceCard({ from }) {
@@ -33,6 +34,11 @@ export default function Home() {
   const tools = listTools()
   const pairCount = listConversions().length
   const formatCount = Object.keys(FORMATS).filter((k) => FORMATS[k].input).length
+  const [recent, setRecent] = useState(() => loadRecent())
+
+  useEffect(() => {
+    setRecent(loadRecent())
+  }, [])
 
   const handleFile = async (file) => {
     setError('')
@@ -117,6 +123,19 @@ export default function Home() {
             ))}
           </div>
         </div>
+      )}
+
+      {recent.length > 0 && (
+        <section className="section" data-kind="recent">
+          <h2>Recent conversions</h2>
+          <div className="card-targets">
+            {recent.map((e) => (
+              <Link key={`${e.from}-${e.to}`} to={`/convert/${e.from}-to-${e.to}`} className="chip">
+                {FORMATS[e.from]?.label || e.from} → {FORMATS[e.to]?.label || e.to}
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {KINDS.map((kind) => {
