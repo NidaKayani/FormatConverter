@@ -3,11 +3,19 @@ export default function OptionsPanel({ schema, values, onChange }) {
 
   const set = (key, value) => onChange({ ...values, [key]: value })
 
+  const formatRange = (opt, value) => {
+    if (opt.max <= 1 && opt.min >= 0) return `${Math.round(Number(value) * 100)}%`
+    return String(value)
+  }
+
   return (
     <div className="options">
       {schema.map((opt) => (
-        <label key={opt.key} className="option" title={opt.help}>
-          <span className="option-label">{opt.label}</span>
+        <label key={opt.key} className="option">
+          <span className="option-label">
+            {opt.label}
+            {opt.help && <span className="option-help">{opt.help}</span>}
+          </span>
           {opt.type === 'select' && (
             <select
               value={String(values[opt.key])}
@@ -34,7 +42,7 @@ export default function OptionsPanel({ schema, values, onChange }) {
                 value={values[opt.key]}
                 onChange={(e) => set(opt.key, Number(e.target.value))}
               />
-              <span className="meta">{Math.round(values[opt.key] * 100)}%</span>
+              <span className="meta">{formatRange(opt, values[opt.key])}</span>
             </span>
           )}
           {opt.type === 'number' && (
@@ -42,6 +50,7 @@ export default function OptionsPanel({ schema, values, onChange }) {
               type="number"
               min={opt.min}
               max={opt.max}
+              step={opt.step}
               placeholder="original"
               value={values[opt.key] ?? ''}
               onChange={(e) => set(opt.key, e.target.value ? Number(e.target.value) : null)}

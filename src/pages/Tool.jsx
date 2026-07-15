@@ -25,7 +25,7 @@ export default function Tool() {
         ]}
         faq={CONVERTER_FAQ}
       />
-      <header className="header">
+      <header className="header page-header">
         <p className="breadcrumb">
           <Link to="/">All converters</Link> / {tool.label}
         </p>

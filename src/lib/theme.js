@@ -7,17 +7,17 @@ export function getPreferredTheme() {
   } catch {
     // ignore
   }
-  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches) {
-    return 'light'
+  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark'
   }
-  return 'dark'
+  return 'light'
 }
 
 export function applyTheme(theme) {
   const value = theme === 'light' ? 'light' : 'dark'
   document.documentElement.setAttribute('data-theme', value)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', value === 'light' ? '#f4f6fa' : '#090a0f')
+  if (meta) meta.setAttribute('content', value === 'light' ? '#f2f4f3' : '#101512')
   try {
     localStorage.setItem(STORAGE_KEY, value)
   } catch {

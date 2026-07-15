@@ -235,16 +235,23 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
                     <span className="queue-name">{f.name}</span>
                     <span className="meta">{formatBytes(f.size)}</span>
                     <span className="queue-actions">
-                      <button type="button" className="btn-link" onClick={() => moveFile(i, -1)} disabled={i === 0}>
-                        Up
+                      <button
+                        type="button"
+                        className="btn btn-icon"
+                        aria-label="Move up"
+                        onClick={() => moveFile(i, -1)}
+                        disabled={i === 0}
+                      >
+                        ↑
                       </button>
                       <button
                         type="button"
-                        className="btn-link"
+                        className="btn btn-icon"
+                        aria-label="Move down"
                         onClick={() => moveFile(i, 1)}
                         disabled={i === files.length - 1}
                       >
-                        Down
+                        ↓
                       </button>
                       <button type="button" className="btn-link" onClick={() => removeFile(i)}>
                         Remove
@@ -253,7 +260,7 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
                   </li>
                 ))}
               </ul>
-              <label className="meta" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <label className="check batch-extra">
                 <input
                   type="checkbox"
                   checked={parallel}
@@ -261,7 +268,7 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
                 />
                 Convert up to 2 files in parallel
               </label>
-              <div style={{ marginTop: '0.5rem' }}>
+              <div className="queue-add">
                 <Dropzone
                   accept={acceptFor(from)}
                   hint="Add more files"
@@ -274,7 +281,7 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
             </>
           )}
           <OptionsPanel schema={schema} values={options} onChange={setOptions} />
-          <div className="toolbar-actions" style={{ justifyContent: 'flex-end', display: 'flex', gap: '0.75rem' }}>
+          <div className="widget-footer">
             <button className="btn btn-primary" onClick={() => run(files, options)}>
               Convert {files.length > 1 ? `${files.length} files ` : ''}to {FORMATS[to].label}
             </button>
@@ -285,7 +292,7 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
       {status === 'converting' && (
         <div className="result">
           <ProgressBar progress={progress} />
-          <div className="toolbar-actions" style={{ justifyContent: 'flex-end', display: 'flex' }}>
+          <div className="widget-footer">
             <button type="button" className="btn" onClick={cancel}>
               Cancel
             </button>
@@ -315,7 +322,10 @@ export default function ConverterWidget({ from, to, initialFile = null, onResult
             {batch.map((entry, i) => (
               <li key={i} className="queue-row">
                 <span className="queue-name">
-                  {entry.ok ? '✅' : '⚠️'} {entry.file.name}
+                  <span className={entry.ok ? 'status-ok' : 'status-bad'}>
+                    {entry.ok ? 'Done' : 'Failed'}
+                  </span>
+                  {entry.file.name}
                 </span>
                 {entry.ok ? (
                   <button

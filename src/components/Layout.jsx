@@ -18,21 +18,22 @@ export default function Layout() {
         <Link to="/" className="nav-brand">
           <img
             src="https://community.quantumlogicslimited.com/logo.png"
-            alt="Quantumlogics logo"
+            alt=""
             className="nav-logo"
           />
           <span>FormatConvert</span>
         </Link>
         <div className="nav-links">
           <NavLink to="/" end>
-            Converters
+            Convert
           </NavLink>
-          <NavLink to="/developers">Developer API</NavLink>
+          <NavLink to="/developers">Developers</NavLink>
           <button
             type="button"
             className="theme-toggle"
             onClick={onToggle}
-            aria-label="Toggle color theme"
+            aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+            aria-pressed={theme === 'dark'}
           >
             {theme === 'light' ? 'Dark' : 'Light'}
           </button>
@@ -44,11 +45,11 @@ export default function Layout() {
 
       <footer className="footer">
         <p>
-          FormatConvert by Quantum Logics — every conversion runs locally in your browser. Files
-          never leave your machine.
+          FormatConvert by Quantum Logics — conversions run entirely in your browser. Files never
+          leave your machine.
         </p>
         <p>
-          <Link to="/developers">Use FormatConvert in your own app →</Link>
+          <Link to="/developers">Embed the SDK in your app →</Link>
         </p>
       </footer>
     </div>

@@ -929,8 +929,8 @@ log('SDK: pdf.worker.min.mjs served', workerRes.ok, `status ${workerRes.status}`
 // 2. UI flows
 // -----------------------------------------------------------------------------
 await page.goto(BASE + '/', { waitUntil: 'networkidle' })
-log('UI: home renders', (await page.locator('.card').count()) >= 13, (await page.locator('.card').count()) + ' cards')
-log('UI: kind sections render', (await page.locator('section.section[data-kind]').count()) >= 2)
+log('UI: home renders', (await page.locator('.format-card, .card').count()) >= 13, (await page.locator('.format-card, .card').count()) + ' cards')
+log('UI: kind sections render', (await page.locator('.format-block[data-kind]').count()) >= 2)
 
 await page.setInputFiles('input[type=file]', {
   name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Hi\n\ntext'),
@@ -949,7 +949,7 @@ await page.setInputFiles('input[type=file]', [1, 2, 3].map((n) => ({
 })))
 await page.waitForSelector('.queue', { timeout: 5000 })
 // Reorder: move last file up so convert order changes
-await page.locator('.queue-row').nth(2).locator('button', { hasText: 'Up' }).click()
+await page.locator('.queue-row').nth(2).locator('button[aria-label="Move up"]').click()
 await page.locator('button', { hasText: 'Convert 3 files' }).click()
 await page.waitForSelector('.queue .btn-link', { timeout: 20000 })
 const batchRows = await page.locator('.queue-row').count()
@@ -958,7 +958,7 @@ log('UI: batch queue converts 3 files + zip-all offered', batchRows === 3 && zip
 log('UI: queue reorder controls present', true)
 
 await page.goto(BASE + '/', { waitUntil: 'networkidle' })
-const recentCount = await page.locator('[data-kind="recent"] .chip').count()
+const recentCount = await page.locator('.recent-strip a').count()
 log('UI: recent conversions appear on Home', recentCount >= 1, `${recentCount} chips`)
 
 await page.goto(BASE + '/convert/pdf-to-nonsense', { waitUntil: 'networkidle' })

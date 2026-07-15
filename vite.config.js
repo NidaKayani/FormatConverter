@@ -16,8 +16,8 @@ export default defineConfig({
         short_name: 'FormatConvert',
         description:
           'Convert PDF, Word, Markdown, HTML, text and images — entirely in your browser.',
-        theme_color: '#090a0f',
-        background_color: '#090a0f',
+        theme_color: '#101512',
+        background_color: '#101512',
         display: 'standalone',
         start_url: '/',
         icons: [

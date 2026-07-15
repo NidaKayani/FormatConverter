@@ -35,7 +35,7 @@ export default function Convert() {
         ]}
         faq={CONVERTER_FAQ}
       />
-      <header className="header">
+      <header className="header page-header">
         <p className="breadcrumb">
           <Link to="/">All converters</Link> / {title}
         </p>

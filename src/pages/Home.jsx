@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { FORMATS, targetsFor, detectFormat, KINDS, sourcesForKind, listTools, listConversions } from '../converters/index.js'
+import {
+  FORMATS,
+  targetsFor,
+  detectFormat,
+  KINDS,
+  sourcesForKind,
+  listTools,
+  listConversions,
+} from '../converters/index.js'
 import { setPendingFile } from '../lib/pendingFile.js'
 import { formatBytes } from '../lib/format.js'
 import { loadRecent } from '../lib/recent.js'
@@ -8,21 +16,37 @@ import Dropzone from '../components/Dropzone.jsx'
 import Seo from '../components/Seo.jsx'
 import { HOME_TITLE, HOME_DESCRIPTION } from '../seo/copy.js'
 
-function SourceCard({ from }) {
+const CHIP_PREVIEW = 6
+
+function FormatCard({ from }) {
   const targets = targetsFor(from)
+  const [expanded, setExpanded] = useState(false)
   if (!targets.length) return null
+  const visible = expanded ? targets : targets.slice(0, CHIP_PREVIEW)
+  const hidden = targets.length - visible.length
+
   return (
-    <div className="card">
-      <div className="card-title">
+    <div className="format-card card">
+      <div className="format-card-title">
         {FORMATS[from].label}
-        <span className="card-arrow">→</span>
+        <span>→</span>
       </div>
-      <div className="card-targets">
-        {targets.map((to) => (
-          <Link key={to} to={`/convert/${from}-to-${to}`} className="chip">
+      <div className="format-card-targets card-targets">
+        {visible.map((to) => (
+          <Link key={to} to={`/convert/${from}-to-${to}`}>
             {FORMATS[to].label}
           </Link>
         ))}
+        {!expanded && hidden > 0 && (
+          <button type="button" className="chip" onClick={() => setExpanded(true)}>
+            +{hidden} more
+          </button>
+        )}
+        {expanded && targets.length > CHIP_PREVIEW && (
+          <button type="button" className="chip" onClick={() => setExpanded(false)}>
+            Less
+          </button>
+        )}
       </div>
     </div>
   )
@@ -37,6 +61,11 @@ export default function Home() {
   const pairCount = listConversions().length
   const formatCount = Object.keys(FORMATS).filter((k) => FORMATS[k].input).length
   const [recent, setRecent] = useState(() => loadRecent())
+
+  const kindSections = KINDS.map((kind) => ({
+    ...kind,
+    sources: sourcesForKind(kind.id),
+  })).filter((k) => k.sources.length)
 
   useEffect(() => {
     setRecent(loadRecent())
@@ -87,93 +116,98 @@ export default function Home() {
   }
 
   return (
-    <>
+    <div className="home">
       <Seo title={HOME_TITLE} description={HOME_DESCRIPTION} path="/" />
-      <header className="header">
-        <h1>Convert any file. Right in your browser.</h1>
-        <p>
-          {formatCount} formats and {pairCount}+ conversion pairs — documents, images, data, ebooks,
-          subtitles, and media. Real parsing and rendering, with nothing uploaded to any server.
-        </p>
-      </header>
 
-      {!detected ? (
-        <Dropzone
-          hint="Drop any file here — we'll detect its format"
-          onFile={handleFile}
-          error={error}
-        />
-      ) : (
-        <div className="result detect-panel">
-          <div className="file-info">
-            <div>
-              <strong>{detected.file.name}</strong>
-              <span className="meta">
-                {' '}
-                · {formatBytes(detected.file.size)} · detected as {FORMATS[detected.from].label}
-              </span>
-            </div>
-            <button className="btn-link" onClick={() => setDetected(null)}>
-              Choose another file
-            </button>
-          </div>
-          <p className="detect-label">Convert to:</p>
-          <div className="card-targets">
-            {detected.targets.map((to) => (
-              <button key={to} className="chip chip-button" onClick={() => go(to)}>
-                {FORMATS[to].label}
+      <section className="home-hero">
+        <p className="home-kicker">Quantum Logics</p>
+        <h1 className="home-brand">FormatConvert</h1>
+        <p className="home-lede">
+          Convert files in your browser. Nothing is uploaded — every conversion stays on your device.
+        </p>
+        <p className="home-stats">
+          {formatCount} formats · {pairCount} conversion pairs
+        </p>
+      </section>
+
+      <div className="home-drop">
+        {!detected ? (
+          <Dropzone
+            hint="Drop a file to get started"
+            onFile={handleFile}
+            error={error}
+          />
+        ) : (
+          <div className="result detect-panel">
+            <div className="file-info">
+              <div>
+                <strong>{detected.file.name}</strong>
+                <span className="meta">
+                  {' '}
+                  · {formatBytes(detected.file.size)} · {FORMATS[detected.from].label}
+                </span>
+              </div>
+              <button type="button" className="btn-link" onClick={() => setDetected(null)}>
+                Choose another
               </button>
-            ))}
+            </div>
+            <p className="detect-label">Convert to</p>
+            <div className="card-targets">
+              {detected.targets.map((to) => (
+                <button key={to} type="button" className="chip" onClick={() => go(to)}>
+                  {FORMATS[to].label}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+
+      {recent.length > 0 && (
+        <div className="recent-strip" aria-label="Recent conversions">
+          {recent.map((e) => (
+            <Link key={`${e.from}-${e.to}`} to={`/convert/${e.from}-to-${e.to}`}>
+              {FORMATS[e.from]?.label || e.from} → {FORMATS[e.to]?.label || e.to}
+            </Link>
+          ))}
         </div>
       )}
 
-      {recent.length > 0 && (
-        <section className="section" data-kind="recent">
-          <h2>Recent conversions</h2>
-          <div className="card-targets">
-            {recent.map((e) => (
-              <Link key={`${e.from}-${e.to}`} to={`/convert/${e.from}-to-${e.to}`} className="chip">
-                {FORMATS[e.from]?.label || e.from} → {FORMATS[e.to]?.label || e.to}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="home-browse">
+        <nav className="kind-tabs" aria-label="Format categories">
+          {kindSections.map((kind) => (
+            <a key={kind.id} href={`#kind-${kind.id}`}>
+              {kind.label}
+            </a>
+          ))}
+          {tools.length > 0 && <a href="#kind-tools">Tools</a>}
+        </nav>
 
-      {KINDS.map((kind) => {
-        const sources = sourcesForKind(kind.id)
-        if (!sources.length) return null
-        return (
-          <section key={kind.id} className="section" data-kind={kind.id}>
+        {kindSections.map((kind) => (
+          <div key={kind.id} className="format-block" id={`kind-${kind.id}`} data-kind={kind.id}>
             <h2>{kind.label}</h2>
-            <div className="cards">
-              {sources.map((from) => (
-                <SourceCard key={from} from={from} />
+            <div className="format-grid">
+              {kind.sources.map((from) => (
+                <FormatCard key={from} from={from} />
               ))}
             </div>
-          </section>
-        )
-      })}
-
-      {tools.length > 0 && (
-        <section className="section" data-kind="tools">
-          <h2>Tools</h2>
-          <div className="cards">
-            {tools.map((t) => (
-              <div key={t.id} className="card">
-                <div className="card-title">{t.label}</div>
-                <p className="meta">{t.description}</p>
-                <div className="card-targets">
-                  <Link to={`/tools/${t.id}`} className="chip">
-                    Open tool
-                  </Link>
-                </div>
-              </div>
-            ))}
           </div>
-        </section>
-      )}
-    </>
+        ))}
+
+        {tools.length > 0 && (
+          <div className="format-block" id="kind-tools" data-kind="tools">
+            <h2>Tools</h2>
+            <div className="tool-grid">
+              {tools.map((t) => (
+                <Link key={t.id} to={`/tools/${t.id}`} className="tool-tile">
+                  <strong>{t.label}</strong>
+                  <span>{t.description}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
   )
 }
