@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FORMATS, getConversion } from '../converters/index.js'
 import ConverterWidget from '../components/ConverterWidget.jsx'
+import Seo from '../components/Seo.jsx'
 import { applyTheme } from '../lib/theme.js'
 
 /**
@@ -23,6 +24,7 @@ export default function Embed() {
   if (!entry) {
     return (
       <div className="embed">
+        <Seo title="Embed" description="FormatConvert embed widget" path="/embed" noindex />
         <p className="error">
           Unsupported conversion “{from} → {to}”. See /developers for the supported matrix.
         </p>
@@ -45,6 +47,12 @@ export default function Embed() {
 
   return (
     <div className="embed">
+      <Seo
+        title={`${FORMATS[from].label} → ${FORMATS[to].label} embed`}
+        description="Chrome-less FormatConvert widget for iframes."
+        path="/embed"
+        noindex
+      />
       <p className="embed-title">
         {FORMATS[from].label} → {FORMATS[to].label}
       </p>

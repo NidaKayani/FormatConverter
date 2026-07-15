@@ -75,6 +75,15 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: ({ url }) => url.pathname.startsWith('/fonts/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdf-fonts',
+              expiration: { maxEntries: 8 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/community\.quantumlogicslimited\.com\//,
             handler: 'CacheFirst',
             options: {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { FORMATS, listConversions, KINDS, listTools } from '../converters/index.js'
-
-const ORIGIN = 'https://formatconvert.quantumlogicslimited.com'
+import Seo from '../components/Seo.jsx'
+import { ORIGIN, DEVELOPERS_TITLE, DEVELOPERS_DESCRIPTION } from '../seo/copy.js'
 
 function CodeBlock({ code }) {
   const [copied, setCopied] = useState(false)
@@ -119,6 +119,7 @@ export default function Developers() {
 
   return (
     <div className="docs">
+      <Seo title={DEVELOPERS_TITLE} description={DEVELOPERS_DESCRIPTION} path="/developers" />
       <header className="header">
         <h1>Developer API</h1>
         <p>
@@ -154,12 +155,19 @@ export default function Developers() {
           </thead>
           <tbody>
             <tr><td><code>pageSize</code></td><td>any → PDF</td><td><code>'a4'</code> (default) or <code>'letter'</code></td></tr>
+            <tr><td><code>font</code></td><td>TXT/MD/HTML/DOCX → PDF</td><td><code>helvetica</code>, <code>times</code>, <code>courier</code>, or <code>noto</code> (Unicode)</td></tr>
+            <tr><td><code>fontSize</code></td><td>→ PDF</td><td>Body size in pt (default 11)</td></tr>
+            <tr><td><code>margin</code></td><td>→ PDF</td><td>Page margin in pt (default 64)</td></tr>
+            <tr><td><code>lineHeight</code></td><td>→ PDF</td><td>Line spacing multiplier (default 1.45)</td></tr>
+            <tr><td><code>pageNumbers</code></td><td>→ PDF</td><td><code>'on'</code> (default) or <code>'off'</code></td></tr>
+            <tr><td><code>mode</code></td><td>TXT → PDF</td><td><code>'plain'</code>, <code>'markdown'</code>, or <code>'detect'</code></td></tr>
+            <tr><td><code>pageBreaks</code></td><td>PDF → TXT</td><td><code>'marker'</code>, <code>'formfeed'</code>, or <code>'none'</code></td></tr>
             <tr><td><code>quality</code></td><td>→ JPEG / WebP</td><td>0.1 – 1, default 0.92</td></tr>
             <tr><td><code>width</code></td><td>image → image</td><td>Resize to this width in px, aspect kept</td></tr>
             <tr><td><code>background</code></td><td>→ JPEG / BMP</td><td>Fill for transparent areas, default <code>#ffffff</code></td></tr>
             <tr><td><code>sizes</code></td><td>→ ICO</td><td>Array of icon sizes, default <code>[16, 32, 48]</code>, max 256</td></tr>
             <tr><td><code>scale</code></td><td>PDF → image</td><td>Render resolution multiplier: 1, 2 (default) or 3</td></tr>
-            <tr><td><code>ocr</code></td><td>PDF → text formats</td><td><code>'auto'</code> (default: OCR scanned PDFs with no text layer) or <code>'off'</code></td></tr>
+            <tr><td><code>ocr</code></td><td>PDF → text formats</td><td><code>'auto'</code> (empty/scanned pages), <code>'force'</code>, or <code>'off'</code></td></tr>
             <tr><td><code>ocrLanguage</code></td><td>OCR conversions</td><td>Tesseract language code, default <code>'eng'</code> (bundled); others stream on first use</td></tr>
             <tr><td><code>from</code></td><td>all</td><td>Force the input format instead of auto-detecting</td></tr>
             <tr><td><code>onProgress</code></td><td>all</td><td>Callback receiving <code>{'{ page, total, stage }'}</code></td></tr>
@@ -304,7 +312,9 @@ const { blob, filename } = await runTool('merge-pdf', pdfFiles)`}
           <li>
             <strong>SEO shells:</strong> build-time prerender writes static HTML under{' '}
             <code>/convert/…</code> and <code>/tools/…</code> with title, description, canonical,
-            and JSON-LD. The SPA still hydrates in the browser; dynamic OG images remain client-side.
+            Open Graph / Twitter tags, OG SVG cards under <code>/og/</code>, and JSON-LD. Home meta
+            is injected into <code>index.html</code>. The SPA hydrates client-side; see{' '}
+            <code>docs/seo.md</code> in the repo.
           </li>
           <li>
             <strong>Install as an app:</strong> the site is a PWA — installed, it converts fully

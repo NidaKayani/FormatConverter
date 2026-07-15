@@ -64,6 +64,44 @@ const OPT_PAGE_SIZE = {
   choices: [{ value: 'a4', label: 'A4' }, { value: 'letter', label: 'US Letter' }],
   help: 'Paper size of the generated PDF.',
 }
+const OPT_FONT_SIZE = {
+  key: 'fontSize', label: 'Font size', type: 'number', default: 11, min: 8, max: 24,
+  help: 'Body text size in points.',
+}
+const OPT_LINE_HEIGHT = {
+  key: 'lineHeight', label: 'Line height', type: 'number', default: 1.45, min: 1, max: 2.5, step: 0.05,
+  help: 'Line spacing multiplier.',
+}
+const OPT_MARGIN = {
+  key: 'margin', label: 'Margin (pt)', type: 'number', default: 64, min: 24, max: 120,
+  help: 'Page margin in points.',
+}
+const OPT_PDF_FONT = {
+  key: 'font', label: 'Font', type: 'select', default: 'helvetica',
+  choices: [
+    { value: 'helvetica', label: 'Helvetica' },
+    { value: 'times', label: 'Times' },
+    { value: 'courier', label: 'Courier' },
+    { value: 'noto', label: 'Noto Sans (Unicode)' },
+  ],
+  help: 'Noto Sans covers Latin Extended and many Unicode symbols. CJK is best-effort.',
+}
+const OPT_PAGE_NUMBERS = {
+  key: 'pageNumbers', label: 'Page numbers', type: 'select', default: 'on',
+  choices: [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+  help: 'Show “n / total” footer on each page.',
+}
+const OPT_TXT_MODE = {
+  key: 'mode', label: 'Layout mode', type: 'select', default: 'plain',
+  choices: [
+    { value: 'plain', label: 'Plain text' },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'detect', label: 'Auto-detect Markdown' },
+  ],
+  help: 'Markdown mode typesets headings, lists, and code via the Markdown → PDF engine.',
+}
+const OPT_TXT_PDF = [OPT_PAGE_SIZE, OPT_PDF_FONT, OPT_FONT_SIZE, OPT_LINE_HEIGHT, OPT_MARGIN, OPT_PAGE_NUMBERS, OPT_TXT_MODE]
+const OPT_MD_PDF = [OPT_PAGE_SIZE, OPT_PDF_FONT, OPT_FONT_SIZE, OPT_LINE_HEIGHT, OPT_MARGIN, OPT_PAGE_NUMBERS]
 const OPT_QUALITY = {
   key: 'quality', label: 'Quality', type: 'range', default: 0.92, min: 0.1, max: 1, step: 0.01,
   help: 'Compression quality for lossy formats (JPEG/WebP).',
@@ -98,10 +136,20 @@ const OPT_OCR_LANGUAGE = {
 const OPT_OCR = {
   key: 'ocr', label: 'OCR scanned pages', type: 'select', default: 'auto',
   choices: [
-    { value: 'auto', label: 'Auto (when no text layer)' },
+    { value: 'auto', label: 'Auto (empty / scanned pages)' },
+    { value: 'force', label: 'Force (all pages)' },
     { value: 'off', label: 'Off' },
   ],
-  help: 'Recognize text in scanned PDFs that have no embedded text.',
+  help: 'Recognize text in scanned or image-only PDF pages. Auto OCRs only empty pages on mixed documents.',
+}
+const OPT_PAGE_BREAKS = {
+  key: 'pageBreaks', label: 'Page separators', type: 'select', default: 'marker',
+  choices: [
+    { value: 'marker', label: '--- Page Break ---' },
+    { value: 'formfeed', label: 'Form feed (\\f)' },
+    { value: 'none', label: 'Blank line only' },
+  ],
+  help: 'How to separate pages in the extracted text.',
 }
 const OPT_SCALE = {
   key: 'scale', label: 'Render scale', type: 'select', default: 2,
@@ -150,21 +198,21 @@ function register(from, to, load, options = [], meta = {}) {
 
 // Documents — every direction is a real parse/render, never a rename.
 // PDF extraction auto-falls back to OCR for scanned documents.
-register('pdf', 'txt', () => import('./docs/pdfToTxt.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
+register('pdf', 'txt', () => import('./docs/pdfToTxt.js'), [OPT_OCR, OPT_OCR_LANGUAGE, OPT_PAGE_BREAKS])
 register('pdf', 'md', () => import('./docs/pdfToMd.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
 register('pdf', 'html', () => import('./docs/pdfToHtml.js'), [OPT_OCR, OPT_OCR_LANGUAGE])
-register('txt', 'pdf', () => import('./docs/textToPdf.js'), [OPT_PAGE_SIZE])
+register('txt', 'pdf', () => import('./docs/textToPdf.js'), OPT_TXT_PDF)
 register('txt', 'md', () => import('./docs/txtToMd.js'), [], { env: 'worker' })
 register('txt', 'html', () => import('./docs/txtToHtml.js'))
-register('md', 'pdf', () => import('./docs/mdToPdf.js'), [OPT_PAGE_SIZE])
+register('md', 'pdf', () => import('./docs/mdToPdf.js'), OPT_MD_PDF)
 register('md', 'txt', () => import('./docs/mdToTxt.js'))
 register('md', 'html', () => import('./docs/mdToHtml.js'), [], { env: 'worker' })
-register('html', 'pdf', () => import('./docs/htmlToPdf.js'), [OPT_PAGE_SIZE])
+register('html', 'pdf', () => import('./docs/htmlToPdf.js'), OPT_MD_PDF)
 register('html', 'md', () => import('./docs/htmlToMd.js'))
 register('html', 'txt', () => import('./docs/htmlToTxt.js'))
 
 // Word documents — mammoth on the way in, the docx generator on the way out
-register('docx', 'pdf', () => import('./docs/docxToPdf.js'), [OPT_PAGE_SIZE])
+register('docx', 'pdf', () => import('./docs/docxToPdf.js'), OPT_MD_PDF)
 register('docx', 'md', () => import('./docs/docxToMd.js'))
 register('docx', 'txt', () => import('./docs/docxToTxt.js'))
 register('docx', 'html', () => import('./docs/docxToHtmlDoc.js'))

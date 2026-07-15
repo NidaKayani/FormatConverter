@@ -21,13 +21,26 @@ function headingLevel(line, bodySize) {
 export async function pdfToMarkdown(file, options = {}, onProgress = () => {}) {
   const pages = await extractPages(file, onProgress)
 
-  // Scanned PDF (no text layer): OCR the pages and return the recognized
-  // text as paragraph-per-block Markdown
+  // Scanned / mixed PDF: OCR empty pages (or all when force / fully scanned)
   if (options.ocr !== 'off') {
-    const { looksScanned, ocrPdfPages } = await import('../ocr/pdfOcr.js')
-    if (looksScanned(pages)) {
+    const { looksScanned, emptyPageIndexes, ocrPdfPages } = await import('../ocr/pdfOcr.js')
+    const ocrMode = options.ocr ?? 'auto'
+    if (ocrMode === 'force' || looksScanned(pages)) {
       const texts = await ocrPdfPages(file, options, onProgress)
       return texts.join('\n\n---\n\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'
+    }
+    const empty = emptyPageIndexes(pages)
+    if (empty.length) {
+      const ocrTexts = await ocrPdfPages(file, options, onProgress, empty)
+      for (const i of empty) {
+        if (!ocrTexts[i]) continue
+        pages[i] = {
+          lines: ocrTexts[i]
+            .split(/\n+/)
+            .filter(Boolean)
+            .map((text, j) => ({ y: 1000 - j * 14, text, size: 11, bold: false })),
+        }
+      }
     }
   }
 

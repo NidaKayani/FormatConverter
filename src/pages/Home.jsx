@@ -5,6 +5,8 @@ import { setPendingFile } from '../lib/pendingFile.js'
 import { formatBytes } from '../lib/format.js'
 import { loadRecent } from '../lib/recent.js'
 import Dropzone from '../components/Dropzone.jsx'
+import Seo from '../components/Seo.jsx'
+import { HOME_TITLE, HOME_DESCRIPTION } from '../seo/copy.js'
 
 function SourceCard({ from }) {
   const targets = targetsFor(from)
@@ -86,6 +88,7 @@ export default function Home() {
 
   return (
     <>
+      <Seo title={HOME_TITLE} description={HOME_DESCRIPTION} path="/" />
       <header className="header">
         <h1>Convert any file. Right in your browser.</h1>
         <p>

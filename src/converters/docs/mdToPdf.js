@@ -84,9 +84,18 @@ function renderListItem(builder, item, bulletText, ctx) {
 }
 
 /** Render a Markdown string to a styled PDF Blob. */
-export function markdownToPdf(md, options = {}) {
+export async function markdownToPdf(md, options = {}) {
   const tokens = marked.lexer(md, { gfm: true })
-  const builder = new PdfBuilder({ pageSize: options.pageSize })
+  const builder = new PdfBuilder({
+    pageSize: options.pageSize,
+    fontSize: options.fontSize,
+    lineHeight: options.lineHeight,
+    margin: options.margin,
+    font: options.font,
+    pageNumbers: options.pageNumbers !== false && options.pageNumbers !== 'off',
+  })
+  await builder.prepareFonts(md)
+  if (options.title) builder.writeTitle(String(options.title))
   renderTokens(builder, tokens)
   return builder.finish()
 }

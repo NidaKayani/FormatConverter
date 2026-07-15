@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const ORIGIN = 'https://formatconvert.quantumlogicslimited.com'
+const lastmod = new Date().toISOString().slice(0, 10)
 
 const { listConversions } = await import(pathToFileURL(join(root, 'src/converters/registry.js')).href)
 const { listTools } = await import(pathToFileURL(join(root, 'src/converters/tools.js')).href)
@@ -30,6 +31,7 @@ ${urls
   .map(
     (u) => `  <url>
     <loc>${u.loc}</loc>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>${u.priority}</priority>
   </url>`
@@ -41,6 +43,8 @@ ${urls
 const robots = `User-agent: *
 Allow: /
 
+Disallow: /embed
+
 Sitemap: ${ORIGIN}/sitemap.xml
 `
 
@@ -48,4 +52,4 @@ const outDir = join(root, 'public')
 mkdirSync(outDir, { recursive: true })
 writeFileSync(join(outDir, 'sitemap.xml'), sitemap)
 writeFileSync(join(outDir, 'robots.txt'), robots)
-console.log(`Sitemap written with ${urls.length} URLs`)
+console.log(`Sitemap written with ${urls.length} URLs (lastmod ${lastmod})`)

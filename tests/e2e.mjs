@@ -11,6 +11,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { chromium } from 'playwright-core'
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
@@ -63,10 +64,23 @@ page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message))
 
 await page.goto(BASE + '/', { waitUntil: 'networkidle' })
 
+/** Two-column PDF for column-aware extraction (built in Node, passed into the page). */
+async function makeTwoColumnPdfBytes() {
+  const doc = await PDFDocument.create()
+  const page = doc.addPage([612, 792])
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  page.drawText('LEFTCOL_ALPHA', { x: 50, y: 700, size: 12, font })
+  page.drawText('LEFTCOL_BETA', { x: 50, y: 680, size: 12, font })
+  page.drawText('RIGHTCOL_GAMMA', { x: 350, y: 700, size: 12, font })
+  page.drawText('RIGHTCOL_DELTA', { x: 350, y: 680, size: 12, font })
+  return await doc.save()
+}
+const twoColumnPdfBytes = Array.from(await makeTwoColumnPdfBytes())
+
 // -----------------------------------------------------------------------------
 // 1. SDK conversion matrix (documents, images, docx, batch, detection)
 // -----------------------------------------------------------------------------
-const sdkReport = await page.evaluate(async () => {
+const sdkReport = await page.evaluate(async (twoColBytes) => {
   const out = []
   const sdk = await import('/sdk.js')
   const { convert, convertMany, zipResults, detectFormat, listConversions } = sdk
@@ -160,6 +174,25 @@ second paragraph line two`
     return t.includes('<h1') && t.includes('<table>') && t.includes('UNIQUEMARKER123')
   })
   await check('txt → pdf', async () => magic((await convert(txtFile, 'pdf')).blob, '%', 'P', 'D', 'F'))
+  await check('txt → pdf (markdown mode)', async () => {
+    const mdish = new File(['# Hello\n\n- a\n- b\n\n**bold** mark'], 'x.txt', { type: 'text/plain' })
+    return magic((await convert(mdish, 'pdf', { mode: 'markdown' })).blob, '%', 'P', 'D', 'F')
+  })
+  await check('txt → pdf (layout options)', async () => {
+    const r = await convert(txtFile, 'pdf', {
+      fontSize: 14,
+      margin: 48,
+      pageNumbers: 'off',
+      font: 'times',
+      lineHeight: 1.6,
+    })
+    return magic(r.blob, '%', 'P', 'D', 'F')
+  })
+  await check('txt → pdf (unicode latin extended)', async () => {
+    const uni = new File(['Café naïve — Żurek ąćęłńóśźż'], 'uni.txt', { type: 'text/plain' })
+    const r = await convert(uni, 'pdf', { font: 'noto' })
+    return magic(r.blob, '%', 'P', 'D', 'F') && r.blob.size > 500
+  })
   await check('txt → md (escaping)', async () => {
     const t = await (await convert(txtFile, 'md')).blob.text()
     return t.includes('\\*stars\\*') && t.includes('\\# this leading hash') &&
@@ -184,6 +217,21 @@ second paragraph line two`
   await check('pdf → txt (real extraction)', async () => {
     const t = await (await convert(pdfFile, 'txt')).blob.text()
     return t.includes('Report Title') && t.includes('UNIQUEMARKER123')
+  })
+  await check('pdf → txt (pageBreaks none)', async () => {
+    const t = await (await convert(pdfFile, 'txt', { pageBreaks: 'none' })).blob.text()
+    return t.includes('Report Title') && !t.includes('--- Page Break ---')
+  })
+  await check('pdf → txt (column reading order)', async () => {
+    const bytes = new Uint8Array(twoColBytes)
+    const colPdf = new File([bytes], 'cols.pdf', { type: 'application/pdf' })
+    const t = await (await convert(colPdf, 'txt', { ocr: 'off' })).blob.text()
+    const a = t.indexOf('LEFTCOL_ALPHA')
+    const b = t.indexOf('LEFTCOL_BETA')
+    const g = t.indexOf('RIGHTCOL_GAMMA')
+    const d = t.indexOf('RIGHTCOL_DELTA')
+    // Column-wise: left column fully before right column
+    return a >= 0 && b > a && g > b && d > g
   })
   await check('pdf → md (headings reconstructed)', async () => {
     const t = await (await convert(pdfFile, 'md')).blob.text()
@@ -825,7 +873,7 @@ Dialogue: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,Hello ASS
     (await detectFormat(new File([wavBuf], 'liar.bin'))) === 'wav')
 
   return out
-})
+}, twoColumnPdfBytes)
 for (const r of sdkReport) log('SDK: ' + r.name, r.ok, r.detail)
 
 // Worker routing lives in the app bundle (__SDK__=false), not the SDK.

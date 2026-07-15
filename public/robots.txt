@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
 
+Disallow: /embed
+
 Sitemap: https://formatconvert.quantumlogicslimited.com/sitemap.xml

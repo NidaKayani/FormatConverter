@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { ensureNotoFont, needsUnicodeFont } from './pdfFonts.js'
 
 /**
  * A small typesetting engine on top of jsPDF used by every *→PDF document
@@ -6,6 +7,9 @@ import { jsPDF } from 'jspdf'
  * blocks, blockquotes, tables, clickable links, page breaks and page numbers.
  *
  * A "run" is { text, bold, italic, mono, link, color }.
+ *
+ * Constructor opts: pageSize, fontSize, lineHeight, margin, font, pageNumbers
+ * font: 'helvetica' | 'times' | 'courier' | 'noto'
  */
 
 const HEADING_SIZES = { 1: 24, 2: 18, 3: 15, 4: 13, 5: 12, 6: 11 }
@@ -13,23 +17,64 @@ const BODY_SIZE = 11
 const CODE_SIZE = 9.5
 const LINE_GAP = 1.45
 
+const STANDARD_FONTS = new Set(['helvetica', 'times', 'courier'])
+
 export class PdfBuilder {
-  constructor({ pageSize = 'a4' } = {}) {
+  constructor({
+    pageSize = 'a4',
+    fontSize = BODY_SIZE,
+    lineHeight = LINE_GAP,
+    margin = 64,
+    font = 'helvetica',
+    pageNumbers = true,
+  } = {}) {
     this.doc = new jsPDF({ unit: 'pt', format: pageSize, compress: true })
     this.pageW = this.doc.internal.pageSize.getWidth()
     this.pageH = this.doc.internal.pageSize.getHeight()
-    this.margin = 64
+    this.margin = Number(margin) || 64
     this.maxW = this.pageW - this.margin * 2
     this.y = this.margin
+    this.bodySize = Number(fontSize) || BODY_SIZE
+    this.lineGap = Number(lineHeight) || LINE_GAP
+    this.pageNumbers = pageNumbers !== false && pageNumbers !== 'off'
+    this.baseFont = STANDARD_FONTS.has(font) || font === 'noto' ? font : 'helvetica'
+    this._fontReady = null
   }
 
-  applyStyle(run = {}, size = BODY_SIZE) {
-    const family = run.mono ? 'courier' : 'helvetica'
+  /** Resolve Unicode font if needed; call before first text write when using noto or mixed Unicode. */
+  async prepareFonts(sampleText = '') {
+    if (this.baseFont === 'noto' || needsUnicodeFont(sampleText)) {
+      this._fontReady = ensureNotoFont(this.doc).then((name) => {
+        this.unicodeFamily = name
+        if (this.baseFont === 'noto') this.baseFont = name
+      })
+      await this._fontReady
+    }
+  }
+
+  familyFor(run = {}) {
+    if (run.mono) return 'courier'
+    if (this.unicodeFamily && (this.baseFont === 'NotoSans' || needsUnicodeFont(run.text))) {
+      return this.unicodeFamily
+    }
+    if (this.baseFont === 'NotoSans') return 'NotoSans'
+    return this.baseFont === 'times' || this.baseFont === 'courier' || this.baseFont === 'helvetica'
+      ? this.baseFont
+      : 'helvetica'
+  }
+
+  applyStyle(run = {}, size = this.bodySize) {
+    const family = this.familyFor(run)
     let style = 'normal'
     if (run.bold && run.italic) style = 'bolditalic'
     else if (run.bold) style = 'bold'
     else if (run.italic) style = 'italic'
-    this.doc.setFont(family, style)
+    // Standard fonts support bolditalic; Noto maps italic→normal / bolditalic→bold via addFont aliases
+    try {
+      this.doc.setFont(family, style)
+    } catch {
+      this.doc.setFont(family, run.bold ? 'bold' : 'normal')
+    }
     this.doc.setFontSize(size)
     if (run.link) this.doc.setTextColor(41, 121, 255)
     else if (run.color) this.doc.setTextColor(...run.color)
@@ -51,6 +96,14 @@ export class PdfBuilder {
   space(pts) {
     // Vertical spacing never carries across a page break
     if (this.y > this.margin) this.y = Math.min(this.y + pts, this.pageH - this.margin)
+  }
+
+  writeTitle(text) {
+    if (!text?.trim()) return
+    this.writeRuns([{ text: text.trim(), bold: true }], {
+      size: Math.max(16, this.bodySize + 5),
+      spacingAfter: 16,
+    })
   }
 
   /**
@@ -117,8 +170,8 @@ export class PdfBuilder {
    * opts: { size, indent, spacingAfter, bulletText, bulletRun }
    */
   writeRuns(runs, opts = {}) {
-    const { size = BODY_SIZE, indent = 0, spacingAfter = 8, bullet = null } = opts
-    const lineH = size * LINE_GAP
+    const { size = this.bodySize, indent = 0, spacingAfter = 8, bullet = null } = opts
+    const lineH = size * this.lineGap
     const availW = this.maxW - indent
     const lines = this.wrapRuns(runs, size, availW)
 
@@ -145,7 +198,7 @@ export class PdfBuilder {
   }
 
   writeHeading(runs, level) {
-    const size = HEADING_SIZES[level] || BODY_SIZE
+    const size = HEADING_SIZES[level] || this.bodySize
     this.space(level <= 2 ? 14 : 10)
     const styled = runs.map((r) => ({ ...r, bold: true }))
     this.writeRuns(styled, { size, spacingAfter: level === 1 ? 6 : 4 })
@@ -264,13 +317,15 @@ export class PdfBuilder {
   }
 
   finish() {
-    const total = this.doc.getNumberOfPages()
-    for (let p = 1; p <= total; p++) {
-      this.doc.setPage(p)
-      this.doc.setFont('helvetica', 'normal')
-      this.doc.setFontSize(9)
-      this.doc.setTextColor(150, 155, 165)
-      this.doc.text(`${p} / ${total}`, this.pageW / 2, this.pageH - 28, { align: 'center' })
+    if (this.pageNumbers) {
+      const total = this.doc.getNumberOfPages()
+      for (let p = 1; p <= total; p++) {
+        this.doc.setPage(p)
+        this.doc.setFont('helvetica', 'normal')
+        this.doc.setFontSize(9)
+        this.doc.setTextColor(150, 155, 165)
+        this.doc.text(`${p} / ${total}`, this.pageW / 2, this.pageH - 28, { align: 'center' })
+      }
     }
     return this.doc.output('blob')
   }

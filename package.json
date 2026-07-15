@@ -12,6 +12,7 @@
     "prebuild": "node scripts/copy-assets.mjs && node scripts/generate-sitemap.mjs",
     "build": "vite build && vite build --config vite.sdk.config.js && node scripts/generate-seo.mjs",
     "e2e": "node tests/e2e.mjs",
+    "docs:check": "node scripts/generate-sitemap.mjs && node scripts/docs-check.mjs",
     "build:app": "vite build && node scripts/generate-seo.mjs",
     "build:sdk": "vite build --config vite.sdk.config.js",
     "preview": "vite preview"
